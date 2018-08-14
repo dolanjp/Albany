@@ -644,9 +644,12 @@ target_link_libraries(albanyLib ${SCOREC_LIB} ${Trilinos_LIBRARIES})
 
 set(ALB_TRILINOS_LIBS ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 
-include_directories (${Trilinos_INCLUDE_DIRS}
-                     ${Trilinos_TPL_INCLUDE_DIRS}
-                     ${ALBANY_PUMI_INCLUDE_DIRS}
+# We don't want warnings from Trilinos and/or its TPLs...
+include_directories (SYSTEM
+                     ${Trilinos_INCLUDE_DIRS}
+                     ${Trilinos_TPL_INCLUDE_DIRS})
+
+include_directories (${ALBANY_PUMI_INCLUDE_DIRS}
                      ./
                      ./evaluators
                      ./evaluators/bc
