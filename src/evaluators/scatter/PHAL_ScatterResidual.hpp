@@ -14,10 +14,9 @@
 
 #include "Albany_Layouts.hpp"
 
+#include "Albany_KokkosTypes.hpp"
+
 #include "Teuchos_ParameterList.hpp"
-#ifdef ALBANY_EPETRA
-#include "Epetra_Vector.h"
-#endif
 
 #ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT
 #include "Kokkos_Vector.hpp"
@@ -63,7 +62,7 @@ protected:
 #ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT
 protected:
   Albany::AbstractDiscretization::WorksetConn nodeID;
-  Kokkos::View<ST*, PHX::Device> fT_kokkos;
+  Albany::DeviceView1d<ST> f_kokkos;
   Kokkos::vector<Kokkos::DynRankView<const ScalarT, PHX::Device>, PHX::Device> val_kokkos;
 
 #endif
@@ -138,7 +137,7 @@ private:
 
   typedef ScatterResidualBase<PHAL::AlbanyTraits::Residual, Traits> Base;
   using Base::nodeID;
-  using Base::fT_kokkos;
+  using Base::f_kokkos;
   using Base::val_kokkos;
 
   typedef typename PHX::Device::execution_space ExecutionSpace;
@@ -199,11 +198,11 @@ public:
 
 private:
   int neq, nunk, numDims;
-  Tpetra_CrsMatrix::local_matrix_type JacT_kokkos;
+  Albany::DeviceLocalMatrix<ST> Jac_kokkos;
 
   typedef ScatterResidualBase<PHAL::AlbanyTraits::Jacobian, Traits> Base;
   using Base::nodeID;
-  using Base::fT_kokkos;
+  using Base::f_kokkos;
   using Base::val_kokkos;
 
   typedef typename PHX::Device::execution_space ExecutionSpace;
