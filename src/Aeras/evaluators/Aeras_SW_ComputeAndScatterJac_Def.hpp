@@ -110,10 +110,10 @@ evaluateFields(typename Traits::EvalData workset)
 //Then the values of these matrices need to be scattered into the global Jacobian.
 
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_Vector>      fT = workset.fT;
-  Teuchos::RCP<Tpetra_CrsMatrix> JacT = workset.JacT;
+  // Teuchos::RCP<Tpetra_Vector>      fT = workset.fT;
+  Teuchos::RCP<Tpetra_CrsMatrix> JacT = Albany::getTpetraMatrix(workset.Jac);
 
-  const bool loadResid = (fT != Teuchos::null);
+  // const bool loadResid = (fT != Teuchos::null);
   LO rowT; 
   Teuchos::Array<LO> colT; 
 
@@ -151,7 +151,6 @@ evaluateFields(typename Traits::EvalData workset)
       }
     }
   }
-
 }
 
-}
+} // namespace Aeras

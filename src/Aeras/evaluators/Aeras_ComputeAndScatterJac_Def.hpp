@@ -11,6 +11,7 @@
 #include "Phalanx_DataLayout.hpp"
 #include "Aeras_Layouts.hpp"
 #include "Albany_Utils.hpp"
+#include "Albany_TpetraThyraUtils.hpp"
 
 namespace Aeras {
 
@@ -591,7 +592,7 @@ evaluateFields(typename Traits::EvalData workset)
   }//end of if buildLaplace
 
 #else
-  jacobian = workset.JacT->getLocalMatrix();
+  jacobian = Albany::getTpetraMatrix(workset.Jac)->getLocalMatrix();
   mc = workset.m_coeff;
   neq = workset.wsElNodeEqID.dimension(2);
   nodeID = workset.wsElNodeEqID;

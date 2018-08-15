@@ -10,6 +10,8 @@
 #include "Intrepid2_FunctionSpaceTools.hpp"
 #include "Sacado_ParameterRegistration.hpp"
 
+#include "Albany_ThyraUtils.hpp"
+
 //uncomment the following line if you want debug output to be printed to screen
 //#define OUTPUT_TO_SCREEN
 
@@ -1578,8 +1580,8 @@ void Neumann<PHAL::AlbanyTraits::Residual, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_Vector> fT = workset.fT;
-  Teuchos::ArrayRCP<ST> fT_nonconstView = fT->get1dViewNonConst();
+  Teuchos::RCP<Thyra_Vector> f = workset.f;
+  Teuchos::ArrayRCP<ST> f_nonconstView = Albany::getNonconstLocalData(f);
 
   // Fill in "neumann" array
   this->evaluateNeumannContribution(workset);
@@ -1588,7 +1590,7 @@ evaluateFields(typename Traits::EvalData workset)
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     for (std::size_t node = 0; node < this->numNodes; ++node)
       for (std::size_t dim = 0; dim < this->numDOFsSet; ++dim){
-        fT_nonconstView[nodeID(cell,node,this->offset[dim])] += this->neumann(cell, node, dim);
+        f_nonconstView[nodeID(cell,node,this->offset[dim])] += this->neumann(cell, node, dim);
     }
   }
 }
@@ -1604,57 +1606,57 @@ Neumann(Teuchos::ParameterList& p)
 {
 }
 // **********************************************************************
-#ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT
-template<typename Traits>
-KOKKOS_INLINE_FUNCTION
-void Neumann<PHAL::AlbanyTraits::Jacobian,Traits>::
-operator()(const Neumann_Tag& tag, const int& cell) const
-{
+// #ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT
+// template<typename Traits>
+// KOKKOS_INLINE_FUNCTION
+// void Neumann<PHAL::AlbanyTraits::Jacobian,Traits>::
+// operator()(const Neumann_Tag& tag, const int& cell) const
+// {
 
-  LO colT[1];
-  LO rowT;
-  ST value[1];
-  int lcol;
-  const int neq = Index.dimension(2);
-  const int nunk = neq*this->numNodes;
+//   LO colT[1];
+//   LO rowT;
+//   ST value[1];
+//   int lcol;
+//   const int neq = Index.dimension(2);
+//   const int nunk = neq*this->numNodes;
 
 
-  for (std::size_t node = 0; node < this->numNodes; ++node)
-    for (std::size_t dim = 0; dim < this->numDOFsSet; ++dim){
+//   for (std::size_t node = 0; node < this->numNodes; ++node)
+//     for (std::size_t dim = 0; dim < this->numDOFsSet; ++dim){
 
-      int dim2=this->offset[dim];
-      rowT = Index(cell,node,dim2);
+//       int dim2=this->offset[dim];
+//       rowT = Index(cell,node,dim2);
 
-      if (this->fT != Teuchos::null) {
-         this->fT->sumIntoLocalValue(rowT, this->neumann(cell, node, dim).val());
-      }
+//       if (this->fT != Teuchos::null) {
+//          this->fT->sumIntoLocalValue(rowT, this->neumann(cell, node, dim).val());
+//       }
 
-      // Check derivative array is nonzero
-      if (this->neumann(cell, node, dim).hasFastAccess()) {
-        // Loop over nodes in element
-        for (unsigned int node_col=0; node_col<this->numNodes; node_col++){
-          // Loop over equations per node
-          for (unsigned int eq_col=0; eq_col<neq; eq_col++) {
-            lcol = neq * node_col + eq_col;
+//       // Check derivative array is nonzero
+//       if (this->neumann(cell, node, dim).hasFastAccess()) {
+//         // Loop over nodes in element
+//         for (unsigned int node_col=0; node_col<this->numNodes; node_col++){
+//           // Loop over equations per node
+//           for (unsigned int eq_col=0; eq_col<neq; eq_col++) {
+//             lcol = neq * node_col + eq_col;
 
-            // Global column
-            colT[0] =  Index(cell, node_col, eq_col);
-            value[0] = this->neumann(cell, node, dim).fastAccessDx(lcol);
-            if (is_adjoint) {
-              // Sum Jacobian transposed
-              jacobian.sumIntoValues(colT[0], &rowT,1, &value[0], false, true);
-            }
-            else {
-              // Sum Jacobian
-              jacobian.sumIntoValues(rowT, colT, nunk,value, false, true);
-            }
-          } // column equations
-        } // column nodes
-      } // has fast access
-    }
+//             // Global column
+//             colT[0] =  Index(cell, node_col, eq_col);
+//             value[0] = this->neumann(cell, node, dim).fastAccessDx(lcol);
+//             if (is_adjoint) {
+//               // Sum Jacobian transposed
+//               jacobian.sumIntoValues(colT[0], &rowT,1, &value[0], false, true);
+//             }
+//             else {
+//               // Sum Jacobian
+//               jacobian.sumIntoValues(rowT, colT, nunk,value, false, true);
+//             }
+//           } // column equations
+//         } // column nodes
+//       } // has fast access
+//     }
 
- }
-#endif
+//  }
+// #endif
 // **********************************************************************
 template<typename Traits>
 void Neumann<PHAL::AlbanyTraits::Jacobian, Traits>::
@@ -1669,57 +1671,54 @@ evaluateFields(typename Traits::EvalData workset)
 //
 //#ifndef ALBANY_KOKKOS_UNDER_DEVELOPMENT
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_Vector> fT = workset.fT;
 
-  //Teuchos::ArrayRCP<ST> fT_nonconstView = fT->get1dViewNonConst();
-  Teuchos::ArrayRCP<ST> fT_nonconstView;
-  if (fT != Teuchos::null)
-    fT_nonconstView = fT->get1dViewNonConst();
-  else
-    fT_nonconstView = Teuchos::null;
+  Teuchos::RCP<Thyra_Vector>   f   = workset.f;
+  Teuchos::RCP<Thyra_LinearOp> jac = workset.Jac;
 
-  Teuchos::RCP<Tpetra_CrsMatrix> JacT = workset.JacT;
+  Teuchos::ArrayRCP<ST> f_nonconstView;
+  if (f != Teuchos::null) {
+    f_nonconstView = Albany::getNonconstLocalData(f);
+  }
 
 
   // Fill in "neumann" array
   this->evaluateNeumannContribution(workset);
   int lcol;
-  Teuchos::Array<LO> rowT(1);
-  Teuchos::Array<LO> colT(1);
+  Teuchos::Array<LO> row(1);
+  Teuchos::Array<LO> col(1);
   Teuchos::Array<ST> value(1);
 
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     for (std::size_t node = 0; node < this->numNodes; ++node)
       for (std::size_t dim = 0; dim < this->numDOFsSet; ++dim){
 
-      rowT[0] = nodeID(cell,node,this->offset[dim]);
+      row[0] = nodeID(cell,node,this->offset[dim]);
 
       int neq = nodeID.dimension(2);
 
-      if (fT != Teuchos::null) {
-         fT->sumIntoLocalValue(rowT[0], this->neumann(cell, node, dim).val());
+      if (f != Teuchos::null) {
+        f_nonconstView[row[0]] += this->neumann(cell, node, dim).val();
       }
 
-        // Check derivative array is nonzero
-        if (this->neumann(cell, node, dim).hasFastAccess()) {
+      // Check derivative array is nonzero
+      if (this->neumann(cell, node, dim).hasFastAccess()) {
 
-          // Loop over nodes in element
-          for (unsigned int node_col=0; node_col<this->numNodes; node_col++){
+        // Loop over nodes in element
+        for (unsigned int node_col=0; node_col<this->numNodes; node_col++){
 
-            // Loop over equations per node
-            for (unsigned int eq_col=0; eq_col<neq; eq_col++) {
-              lcol = neq * node_col + eq_col;
+          // Loop over equations per node
+          for (unsigned int eq_col=0; eq_col<neq; eq_col++) {
+            lcol = neq * node_col + eq_col;
 
             // Global column
-            colT[0] =  nodeID(cell,node_col,eq_col);
+            col[0] =  nodeID(cell,node_col,eq_col);
             value[0] = this->neumann(cell, node, dim).fastAccessDx(lcol);
             if (workset.is_adjoint) {
               // Sum Jacobian transposed
-              JacT->sumIntoLocalValues(colT[0], rowT(), value());
-            }
-            else {
+              Albany::addToLocalRowValues(jac,col[0],row(),value());
+            } else {
               // Sum Jacobian
-            JacT->sumIntoLocalValues(rowT[0], colT(), value());
+              Albany::addToLocalRowValues(jac,row[0],col(),value());
             }
           } // column equations
         } // column nodes
@@ -1774,32 +1773,51 @@ void Neumann<PHAL::AlbanyTraits::Tangent, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_Vector> fT = workset.fT;
-  Teuchos::RCP<Tpetra_MultiVector> JVT = workset.JVT;
-  Teuchos::RCP<Tpetra_MultiVector> fpT = workset.fpT;
 
+  Teuchos::RCP<Thyra_Vector>       f = workset.f;
+  Teuchos::RCP<Thyra_MultiVector> JV = workset.JV;
+  Teuchos::RCP<Thyra_MultiVector> fp = workset.fp;
+
+  Teuchos::ArrayRCP<ST> f_nonconstView;
+
+  Teuchos::ArrayRCP<Teuchos::ArrayRCP<ST>> JV_nonconst2dView;
+  Teuchos::ArrayRCP<Teuchos::ArrayRCP<ST>> fp_nonconst2dView;
+
+  if (!f.is_null()) {
+    f_nonconstView = Albany::getNonconstLocalData(f);
+  }
+  if (!JV.is_null()) {
+    JV_nonconst2dView = Albany::getNonconstLocalData(JV);
+  }
+  if (!fp.is_null()) {
+    fp_nonconst2dView = Albany::getNonconstLocalData(fp);
+  }
   // Fill the local "neumann" array with cell contributions
 
   this->evaluateNeumannContribution(workset);
 
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
-    for (std::size_t node = 0; node < this->numNodes; ++node)
+    for (std::size_t node = 0; node < this->numNodes; ++node) {
       for (std::size_t dim = 0; dim < this->numDOFsSet; ++dim){
 
         int row = nodeID(cell,node,this->offset[dim]);
 
-        if (fT != Teuchos::null)
-          fT->sumIntoLocalValue(row, this->neumann(cell, node, dim).val());
+        if (f != Teuchos::null) {
+          f_nonconstView[row] += this->neumann(cell, node, dim).val();
+        }
 
-        if (JVT != Teuchos::null)
-          for (int col=0; col<workset.num_cols_x; col++)
-
-            JVT->sumIntoLocalValue(row, col, this->neumann(cell, node, dim).dx(col));
-
-        if (fpT != Teuchos::null)
-          for (int col=0; col<workset.num_cols_p; col++)
-            fpT->sumIntoLocalValue(row, col, this->neumann(cell, node, dim).dx(col+workset.param_offset));
+        if (JV != Teuchos::null) {
+          for (int col=0; col<workset.num_cols_x; col++) {
+            JV_nonconst2dView[col][row] += this->neumann(cell, node, dim).dx(col);
+          }
+        }
+        if (fp != Teuchos::null) {
+          for (int col=0; col<workset.num_cols_p; col++) {
+            fp_nonconst2dView[col][row] += this->neumann(cell, node, dim).dx(col+workset.param_offset);
+          }
+        }
       }
+    }
   }
 }
 
@@ -1820,7 +1838,9 @@ void Neumann<PHAL::AlbanyTraits::DistParamDeriv, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_MultiVector> fpVT = workset.fpVT;
+  Teuchos::RCP<Thyra_MultiVector> fpV = workset.fpV;
+  Teuchos::ArrayRCP<Teuchos::ArrayRCP<ST>> fpV_nonconst2dView = Albany::getNonconstLocalData(fpV);
+
   bool trans = workset.transpose_dist_param_deriv;
   int num_cols = workset.Vp->domain()->dim();
 
@@ -1831,13 +1851,13 @@ evaluateFields(typename Traits::EvalData workset)
   if (trans) {
     int neq = workset.numEqs;
     const Albany::IDArray&  wsElDofs = workset.distParamLib->get(workset.dist_param_deriv_name)->workset_elem_dofs()[workset.wsIndex];
+
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
-      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> >& local_Vp =
-        workset.local_Vp[cell];
+      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> >& local_Vp = workset.local_Vp[cell];
       const int num_deriv = local_Vp.size()/neq;
       for (int i=0; i<num_deriv; i++) {
         const LO row = wsElDofs((int)cell,i,0);
-        if(row<0) continue;
+        if(row<0) { continue; }
         for (int col=0; col<num_cols; col++) {
           double val = 0.0;
           for (std::size_t node = 0; node < this->numNodes; ++node) {
@@ -1846,31 +1866,28 @@ evaluateFields(typename Traits::EvalData workset)
               val += this->neumann(cell, node, dim).dx(i)*local_Vp[node*neq+eq][col];
             }
           }
-          fpVT->sumIntoLocalValue(row, col, val);
+          fpV_nonconst2dView[col][row] += val;
         }
       }
     }
-
-  }
-
-  else {
+  } else {
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
-      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> >& local_Vp =
-        workset.local_Vp[cell];
+      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> >& local_Vp = workset.local_Vp[cell];
       const int num_deriv = local_Vp.size();
 
-      for (std::size_t node = 0; node < this->numNodes; ++node)
+      for (std::size_t node = 0; node < this->numNodes; ++node) {
         for (std::size_t dim = 0; dim < this->numDOFsSet; ++dim){
           const int row = nodeID(cell,node,this->offset[dim]);
           for (int col=0; col<num_cols; col++) {
             double val = 0.0;
-            for (int i=0; i<num_deriv; ++i)
+            for (int i=0; i<num_deriv; ++i) {
               val += this->neumann(cell, node, dim).dx(i)*local_Vp[i][col];
-            fpVT->sumIntoLocalValue(row, col, val);
+            }
+            fpV_nonconst2dView[col][row] += val;
           }
         }
+      }
     }
-
   }
 }
 

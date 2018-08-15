@@ -59,9 +59,8 @@ SchrodingerDirichlet(Teuchos::ParameterList& p) :
 template<typename Traits>
 void SchrodingerDirichlet<PHAL::AlbanyTraits::Residual, Traits>::
 evaluateFields(typename Traits::EvalData dirichletWorkset)
-{
-  
-  Teuchos::RCP<Tpetra_Vector> fT = dirichletWorkset.fT;
+{ 
+  Teuchos::RCP<Tpetra_Vector> fT = Albany::getTpetraVector(dirichletWorkset.f);
   Teuchos::RCP<const Tpetra_Vector> xT = Albany::getConstTpetraVector(dirichletWorkset.x);
   Teuchos::ArrayRCP<const ST> xT_constView = xT->get1dView();
   Teuchos::ArrayRCP<ST> fT_nonconstView = fT->get1dViewNonConst();
@@ -91,11 +90,10 @@ template<typename Traits>
 void SchrodingerDirichlet<PHAL::AlbanyTraits::Jacobian, Traits>::
 evaluateFields(typename Traits::EvalData dirichletWorkset)
 {
-
-  Teuchos::RCP<Tpetra_Vector> fT = dirichletWorkset.fT;
+  Teuchos::RCP<Tpetra_Vector> fT = Albany::getTpetraVector(dirichletWorkset.f);
   Teuchos::RCP<const Tpetra_Vector> xT = Albany::getConstTpetraVector(dirichletWorkset.x);
   Teuchos::ArrayRCP<const ST> xT_constView = xT->get1dView();
-  Teuchos::RCP<Tpetra_CrsMatrix> jacT = dirichletWorkset.JacT;
+  Teuchos::RCP<Tpetra_CrsMatrix> jacT = Albany::getTpetraMatrix(dirichletWorkset.Jac);
 
 
   const RealType j_coeff = dirichletWorkset.j_coeff;
@@ -150,9 +148,9 @@ template<typename Traits>
 void SchrodingerDirichlet<PHAL::AlbanyTraits::Tangent, Traits>::
 evaluateFields(typename Traits::EvalData dirichletWorkset)
 {
-  Teuchos::RCP<Tpetra_Vector> fT = dirichletWorkset.fT;
-  Teuchos::RCP<Tpetra_MultiVector> fpT = dirichletWorkset.fpT;
-  Teuchos::RCP<Tpetra_MultiVector> JVT = dirichletWorkset.JVT;
+  Teuchos::RCP<Tpetra_Vector> fT = Albany::getTpetraVector(dirichletWorkset.f);
+  Teuchos::RCP<Tpetra_MultiVector> fpT = Albany::getTpetraMultiVector(dirichletWorkset.fp);
+  Teuchos::RCP<Tpetra_MultiVector> JVT = Albany::getTpetraMultiVector(dirichletWorkset.JV);
   Teuchos::RCP<const Tpetra_Vector> xT = Albany::getConstTpetraVector(dirichletWorkset.x);
   Teuchos::RCP<const Tpetra_MultiVector> VxT = Albany::getConstTpetraMultiVector(dirichletWorkset.Vx);
 
@@ -210,14 +208,12 @@ evaluateFields(typename Traits::EvalData dirichletWorkset)
   const std::vector<std::vector<int> >& nsNodes = 
     dirichletWorkset.nodeSets->find(this->nodeSetID)->second;
 
-  Teuchos::RCP<Tpetra_MultiVector> fpVT = dirichletWorkset.fpVT;
-  Teuchos::ArrayRCP<ST> fpVT_nonconstView; 
   bool trans = dirichletWorkset.transpose_dist_param_deriv;
-  int num_cols = fpVT->getNumVectors();
 
   if (trans) {
-    Teuchos::RCP<Tpetra_MultiVector> VpT = dirichletWorkset.Vp_bcT;
+    Teuchos::RCP<Tpetra_MultiVector> VpT = Albany::getTpetraMultiVector(dirichletWorkset.Vp_bc);
     Teuchos::ArrayRCP<ST> VpT_nonconstView; 
+    int num_cols = VpT->getNumVectors();
     for (unsigned int inode = 0; inode < nsNodes.size(); inode++) {
       int lunk = nsNodes[inode][this->offset];
   
@@ -227,9 +223,10 @@ evaluateFields(typename Traits::EvalData dirichletWorkset)
         VpT_nonconstView[lunk] = 0.0; 
       }
     }
-  }
-
-  else {
+  } else {
+    Teuchos::RCP<Tpetra_MultiVector> fpVT = Albany::getTpetraMultiVector(dirichletWorkset.fpV);
+    Teuchos::ArrayRCP<ST> fpVT_nonconstView; 
+    int num_cols = fpVT->getNumVectors();
     for (unsigned int inode = 0; inode < nsNodes.size(); inode++) {
       int lunk = nsNodes[inode][this->offset];
 

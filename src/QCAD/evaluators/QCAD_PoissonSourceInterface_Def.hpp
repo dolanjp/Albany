@@ -5,12 +5,13 @@
 
 //IK, 9/13/14: only Epetra is SG and MP
 
+#include "Albany_TpetraThyraUtils.hpp"
+
 #include "Teuchos_TestForException.hpp"
 #include "Phalanx_DataLayout.hpp"
 #include <string>
 
 #include "Intrepid2_FunctionSpaceTools.hpp"
-//#include "Sacado_ParameterRegistration.hpp"
 
 //uncomment the following line if you want debug output to be printed to screen
 //#define OUTPUT_TO_SCREEN
@@ -483,7 +484,7 @@ evaluateFields(typename Traits::EvalData workset)
   this->evaluateInterfaceContribution(workset);
 
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_Vector> fT = workset.fT;
+  Teuchos::RCP<Tpetra_Vector> fT = Albany::getTpetraVector(workset.f);
   Teuchos::ArrayRCP<ST> fT_nonconstView = fT->get1dViewNonConst();
 
   // Place it at the appropriate offset into F
@@ -521,11 +522,12 @@ evaluateFields(typename Traits::EvalData workset)
   this->evaluateInterfaceContribution(workset);
 
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_Vector> fT = workset.fT;
+  Teuchos::RCP<Tpetra_Vector>    fT   = Albany::getTpetraVector(workset.f);
+  Teuchos::RCP<Tpetra_CrsMatrix> JacT = Albany::getTpetraMatrix(workset.Jac);
+
   Teuchos::ArrayRCP<ST> fT_nonconstView; 
   if (Teuchos::nonnull(fT)) 
     fT_nonconstView = fT->get1dViewNonConst();
-  Teuchos::RCP<Tpetra_CrsMatrix> JacT = workset.JacT;
 
 
   int lcol;
@@ -604,9 +606,9 @@ evaluateFields(typename Traits::EvalData workset)
   this->evaluateInterfaceContribution(workset);
 
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_Vector> fT = workset.fT;
-  Teuchos::RCP<Tpetra_MultiVector> JVT = workset.JVT;
-  Teuchos::RCP<Tpetra_MultiVector> fpT = workset.fpT;
+  Teuchos::RCP<Tpetra_Vector>      fT  = Albany::getTpetraVector(workset.f);
+  Teuchos::RCP<Tpetra_MultiVector> JVT = Albany::getTpetraMultiVector(workset.JV);
+  Teuchos::RCP<Tpetra_MultiVector> fpT = Albany::getTpetraMultiVector(workset.fp);
   
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     for (std::size_t node = 0; node < this->numNodes; ++node)
@@ -652,7 +654,7 @@ evaluateFields(typename Traits::EvalData workset)
 
   this->evaluateInterfaceContribution(workset);
 
-  Teuchos::RCP<Tpetra_MultiVector> fpVT = workset.fpVT;
+  Teuchos::RCP<Tpetra_MultiVector> fpVT = Albany::getTpetraMultiVector(workset.fpV);
   bool trans = workset.transpose_dist_param_deriv;
   int num_cols = workset.Vp->domain()->dim();
 
@@ -706,4 +708,4 @@ evaluateFields(typename Traits::EvalData workset)
   }
 }
 
-}
+} // namespace QCAD

@@ -11,6 +11,7 @@
 #include "Phalanx_DataLayout.hpp"
 #include "Aeras_Layouts.hpp"
 #include "Albany_Utils.hpp"
+#include "Albany_TpetraThyraUtils.hpp"
 
 namespace Aeras {
 
@@ -167,7 +168,7 @@ evaluateFields(typename Traits::EvalData workset)
   nodeID = workset.wsElNodeEqID;
 
   // Get Tpetra vector view from a specific device
-  auto fT_2d = workset.fT->template getLocalView<PHX::Device>();
+  auto fT_2d = Albany::getTpetraVector(workset.f)->template getLocalView<PHX::Device>();
   fT_kokkos = Kokkos::subview(fT_2d, Kokkos::ALL(), 0);
 
   // Get MDField views from std::vector
@@ -521,13 +522,13 @@ evaluateFields(typename Traits::EvalData workset)
   nunk = neq*this->numNodes;
 
   // Get Tpetra vector view and local matrix
-  const bool loadResid = Teuchos::nonnull(workset.fT);
+  const bool loadResid = Teuchos::nonnull(workset.f);
   if (loadResid) {
-    auto fT_2d = workset.fT->template getLocalView<PHX::Device>();
+    auto fT_2d = Albany::getTpetraVector(workset.f)->template getLocalView<PHX::Device>();
     fT_kokkos = Kokkos::subview(fT_2d, Kokkos::ALL(), 0);
   }
 
-  Teuchos::RCP<Tpetra_CrsMatrix> JacT = workset.JacT;
+  Teuchos::RCP<Tpetra_CrsMatrix> JacT = Albany::getTpetraMatrix(workset.Jac);
   if (!JacT->isFillComplete())
     JacT->fillComplete();
   JacT_kokkos = JacT->getLocalMatrix();
@@ -574,9 +575,9 @@ void ScatterResidual<PHAL::AlbanyTraits::Tangent, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_Vector>       fT = workset.fT;
-  Teuchos::RCP<Tpetra_MultiVector> JVT = workset.JVT;
-  Teuchos::RCP<Tpetra_MultiVector> fpT = workset.fpT;
+  Teuchos::RCP<Tpetra_Vector>       fT = Albany::getTpetraVector(workset.f);
+  Teuchos::RCP<Tpetra_MultiVector> JVT = Albany::getTpetraMultiVector(workset.JV);
+  Teuchos::RCP<Tpetra_MultiVector> fpT = Albany::getTpetraMultiVector(workset.fp);
 
   int rowT; 
 
@@ -651,4 +652,4 @@ evaluateFields(typename Traits::EvalData workset)
   } 
 }
 
-}
+} // namespace Aeras
