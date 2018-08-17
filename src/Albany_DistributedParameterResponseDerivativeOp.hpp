@@ -127,7 +127,7 @@ namespace Albany {
     virtual const Epetra_Map& OperatorDomainMap() const {
       const Teuchos::RCP<const Tpetra_Map>& map = use_transpose ?
         app->getResponse(response_index)->responseMapT() :
-        app->getDistParamLib()->get(param_name)->map();
+        app->getDistributedParameterLibrary()->get(param_name)->map();
       Comm();
       domain_map = Petra::TpetraMap_To_EpetraMap(map, comm_e);
       return *domain_map;
@@ -139,7 +139,7 @@ namespace Albany {
      */
     virtual const Epetra_Map& OperatorRangeMap() const {
       const Teuchos::RCP<const Tpetra_Map>& map = use_transpose ?
-        app->getDistParamLib()->get(param_name)->map() :
+        app->getDistributedParameterLibrary()->get(param_name)->map() :
         app->getResponse(response_index)->responseMapT();
       Comm();
       range_map = Petra::TpetraMap_To_EpetraMap(map, comm_e);

@@ -7,6 +7,8 @@
 #if !defined(ACEdensity_hpp)
 #define ACEdensity_hpp
 
+#include "Albany_Layouts.hpp"
+
 #include "Phalanx_Evaluator_Derived.hpp"
 #include "Phalanx_Evaluator_WithBaseImpl.hpp"
 #include "Phalanx_MDField.hpp"

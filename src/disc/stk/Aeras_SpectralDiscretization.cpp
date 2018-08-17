@@ -52,6 +52,8 @@ extern "C"
 #include "MatrixMarket_Tpetra.hpp"
 
 // Albany includes
+#include "Albany_TpetraThyraUtils.hpp"
+#include "Albany_EpetraThyraUtils.hpp"
 #include "Albany_Utils.hpp"
 #include "Albany_NodalGraphUtils.hpp"
 #include "Albany_STKNodeFieldContainer.hpp"
@@ -229,6 +231,27 @@ Aeras::SpectralDiscretization::getJacobianGraphT() const
   return graphT;
 }
 
+Teuchos::RCP<Thyra_LinearOp>
+Aeras::SpectralDiscretization::createJacobianOp () const
+{
+  BuildType bt = build_type();
+  Teuchos::RCP<Thyra_LinearOp> ov_jac_op;
+  switch (bt) {
+    case BuildType::Epetra:
+      jac_op = createThyraLinearOp(Teuchos::rcp( new Epetra_CrsMatrix(::Copy, *getJacobianGraph()) ));
+      break;
+    case BuildType::Tpetra:
+      jac_op = createThyraLinearOp(Teuchos::rcp( new Tpetra_CrsMatrix(getJacobianGraphT()) ));
+      break;
+    case BuildType::None:
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Error! Albany build type is 'None'. Please, initialize build type first.\n");
+      break;
+    default:
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Error! Unknown Albany build type.\n");
+  }
+  return jac_op;
+}
+
 Teuchos::RCP<const Tpetra_CrsGraph>
 Aeras::SpectralDiscretization::getImplicitJacobianGraphT() const
 {
@@ -250,6 +273,27 @@ Teuchos::RCP<const Tpetra_CrsGraph>
 Aeras::SpectralDiscretization::getOverlapJacobianGraphT() const
 {
   return overlap_graphT;
+}
+
+Teuchos::RCP<Thyra_LinearOp>
+Aeras::SpectralDiscretization::createOverlapJacobianOp () const
+{
+  BuildType bt = build_type();
+  Teuchos::RCP<Thyra_LinearOp> ov_jac_op;
+  switch (bt) {
+    case BuildType::Epetra:
+      ov_jac_op = createThyraLinearOp(Teuchos::rcp( new Epetra_CrsMatrix(::Copy, *getOverlapJacobianGraph()) ));
+      break;
+    case BuildType::Tpetra:
+      ov_jac_op = createThyraLinearOp(Teuchos::rcp( new Tpetra_CrsMatrix(getOverlapJacobianGraphT()) ));
+      break;
+    case BuildType::None:
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Error! Albany build type is 'None'. Please, initialize build type first.\n");
+      break;
+    default:
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Error! Unknown Albany build type.\n");
+  }
+  return ov_jac_op;
 }
 
 Teuchos::RCP<const Tpetra_CrsGraph>

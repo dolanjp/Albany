@@ -12,6 +12,7 @@
 #include "Phalanx_Evaluator_Derived.hpp"
 #include "Phalanx_MDField.hpp"
 
+#include "Albany_DiscretizationUtils.hpp"
 #include "Aeras_Layouts.hpp"
 
 #include "Teuchos_ParameterList.hpp"
@@ -98,7 +99,7 @@ public:
   RealType mc;
   int neq;
 
-  Albany::AbstractDiscretization::WorksetConn nodeID;
+  Albany::WorksetConn nodeID;
 
   struct ComputeAndScatterJac_buildMass_Tag{};
 

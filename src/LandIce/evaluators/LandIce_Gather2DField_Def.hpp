@@ -10,6 +10,8 @@
 #include "Phalanx_TypeStrings.hpp"
 #include "Sacado.hpp"
 
+#include "Albany_AbstractDiscretization.hpp"
+
 #include "Albany_TpetraThyraUtils.hpp"
 
 //uncomment the following line if you want debug output to be printed to screen

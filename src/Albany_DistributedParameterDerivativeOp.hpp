@@ -37,7 +37,7 @@ namespace Albany {
       param_name(param_name_),
       use_transpose(false) {
       comm =  app->getEpetraComm();
-      map = Petra::TpetraMap_To_EpetraMap(app->getDistParamLib()->get(param_name)->map(), comm);
+      map = Petra::TpetraMap_To_EpetraMap(app->getDistributedParameterLibrary()->get(param_name)->map(), comm);
     }
 
     //! Destructor

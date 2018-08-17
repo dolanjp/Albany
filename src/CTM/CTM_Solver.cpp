@@ -77,7 +77,7 @@ void Solver::initial_setup() {
   // initializations
   out = Teuchos::VerboseObjectBase::getDefaultOStream();
   param_lib = rcp(new ParamLib);
-  dist_param_lib = rcp(new DistParamLib);
+  dist_param_lib = rcp(new DistributedParameterLibrary);
   t_state_mgr = rcp(new Albany::StateManager);
   m_state_mgr = rcp(new Albany::StateManager);
   t_sol_info = rcp(new SolutionInfo);

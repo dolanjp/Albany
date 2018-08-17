@@ -42,7 +42,7 @@ class Solver {
     RCP<ParameterList> adapt_params;
 
     RCP<ParamLib> param_lib;
-    RCP<DistParamLib> dist_param_lib;
+    RCP<DistributedParameterLibrary> dist_param_lib;
 
     RCP<Albany::AbstractDiscretization> t_disc;
     RCP<Albany::AbstractDiscretization> m_disc;

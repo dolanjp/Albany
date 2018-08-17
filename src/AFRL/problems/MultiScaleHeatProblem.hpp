@@ -32,7 +32,7 @@ namespace Albany {
     MultiScaleHeatProblem(
       const Teuchos::RCP<Teuchos::ParameterList>& params,
       const Teuchos::RCP<ParamLib>& paramLib,
-      //const Teuchos::RCP<DistParamLib>& distParamLib,
+      //const Teuchos::RCP<DistributedParameterLibrary>& distParamLib,
       const int numDim_,
       Teuchos::RCP<const Teuchos::Comm<int> >& commT_);
 
@@ -224,7 +224,7 @@ Albany::MultiScaleHeatProblem::constructEvaluators(
     // p->set< RCP<DataLayout> >("Workset Scalar Data Layout", dl->workset_scalar);
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
-    //p->set<RCP<DistParamLib> >("Distributed Parameter Library", distParamLib);
+    //p->set<RCP<DistributedParameterLibrary> >("Distributed Parameter Library", distParamLib);
     Teuchos::ParameterList& paramList = params->sublist("Thermal Conductivity");
     p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
 

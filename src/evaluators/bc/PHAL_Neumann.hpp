@@ -15,7 +15,7 @@
 #include "Intrepid2_CellTools.hpp"
 #include "Intrepid2_Cubature.hpp"
 
-#include "Albany_ProblemUtils.hpp"
+#include "Albany_Layouts.hpp"
 #include "Sacado_ParameterAccessor.hpp"
 #include "PHAL_AlbanyTraits.hpp"
 #include "PHAL_Utilities.hpp"

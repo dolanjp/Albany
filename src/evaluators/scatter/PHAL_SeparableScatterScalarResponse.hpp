@@ -10,6 +10,7 @@
 #define PHAL_SEPARABLE_SCATTER_SCALAR_RESPONSE_HPP
 
 #include "PHAL_ScatterScalarResponse.hpp"
+#include "Shards_CellTopologyData.h"
 
 namespace PHAL {
 

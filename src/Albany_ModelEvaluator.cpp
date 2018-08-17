@@ -8,6 +8,8 @@
 //Not compiled if ALBANY_EPETRA_EXE is off.
 
 #include "Albany_ModelEvaluator.hpp"
+
+#include "Albany_DistributedParameterLibrary.hpp"
 #include "Albany_DistributedParameterDerivativeOp.hpp"
 #include "Albany_DistributedParameterResponseDerivativeOp.hpp"
 #include "Teuchos_ScalarTraits.hpp"
@@ -162,7 +164,7 @@ Albany::ModelEvaluator::ModelEvaluator(
   }
 
   // Setup distributed parameters
-  distParamLib = app->getDistParamLib();
+  distParamLib = app->getDistributedParameterLibrary();
   Teuchos::ParameterList& distParameterParams =
     problemParams.sublist("Distributed Parameters");
   Teuchos::ParameterList* param_list;
@@ -200,13 +202,13 @@ Albany::ModelEvaluator::ModelEvaluator(
     dist_param_names[i] = *p_name_ptr;
     //set parameters bonuds
     if(param_list) {
-      Teuchos::RCP<const DistParam> distParam = distParamLib->get(*p_name_ptr);
+      Teuchos::RCP<const DistributedParameter> distParam = distParamLib->get(*p_name_ptr);
       if(param_list->isParameter("Lower Bound") && (distParam->lower_bounds_vector() != Teuchos::null))
-        distParam->lower_bounds_vector()->putScalar(param_list->get<double>("Lower Bound"));
+        distParam->lower_bounds_vector()->assign(param_list->get<double>("Lower Bound"));
       if(param_list->isParameter("Upper Bound") && (distParam->upper_bounds_vector() != Teuchos::null))
-        distParam->upper_bounds_vector()->putScalar(param_list->get<double>("Upper Bound"));
+        distParam->upper_bounds_vector()->assign(param_list->get<double>("Upper Bound"));
       if(param_list->isParameter("Initial Uniform Value") && (distParam->vector() != Teuchos::null))
-        distParam->vector()->putScalar(param_list->get<double>("Initial Uniform Value"));
+        distParam->vector()->assign(param_list->get<double>("Initial Uniform Value"));
     }
   }
 
@@ -245,7 +247,9 @@ Albany::ModelEvaluator::get_p_map(int l) const
   if (l < num_param_vecs)
     return epetra_param_map[l];
   Teuchos::RCP<const Epetra_Comm> comm = app->getEpetraComm();
-  return Petra::TpetraMap_To_EpetraMap(distParamLib->get(dist_param_names[l-num_param_vecs])->map(), comm);
+  auto vs = distParamLib->get(dist_param_names[l-num_param_vecs])->vector_space();
+  auto map = getTpetraMap(vs);
+  return Petra::TpetraMap_To_EpetraMap(map, comm);
 }
 
 Teuchos::RCP<const Epetra_Map>
@@ -639,7 +643,7 @@ Albany::ModelEvaluator::evalModel(const InArgs& inArgs,
     if (p != Teuchos::null) {
       pT = Petra::EpetraVector_To_TpetraVectorConst(*p, commT);
       //*(distParamLib->get(dist_param_names[i])->vector()) = *p;
-      *(distParamLib->get(dist_param_names[i])->vector()) = *pT;
+      distParamLib->get(dist_param_names[i])->vector()->assign(*createThyraVector(pT));
     }
   }
 

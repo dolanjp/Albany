@@ -7,10 +7,12 @@
 #include <vector>
 #include <string>
 
+#include "Albany_Utils.hpp"
+#include "Albany_TpetraThyraUtils.hpp"
+
 #include "Teuchos_TestForException.hpp"
 #include "Phalanx_DataLayout.hpp"
 #include "Aeras_Layouts.hpp"
-#include "Albany_Utils.hpp"
 
 namespace Aeras {
 

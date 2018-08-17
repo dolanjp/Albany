@@ -12,6 +12,7 @@
 #include "Phalanx_Evaluator_Derived.hpp"
 #include "Phalanx_MDField.hpp"
 
+#include "Albany_DiscretizationUtils.hpp"
 #include "Aeras_Layouts.hpp"
 
 #include "Teuchos_ParameterList.hpp"
@@ -59,7 +60,7 @@ protected:
 
 #ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT
 protected:
-  Albany::AbstractDiscretization::WorksetConn nodeID; 
+  Albany::WorksetConn nodeID; 
   Kokkos::View<ST*, PHX::Device> fT_kokkos;
   Kokkos::vector<Kokkos::DynRankView<const ScalarT, PHX::Device>, PHX::Device> val_kokkos;
 

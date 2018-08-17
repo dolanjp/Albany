@@ -7,6 +7,7 @@
 
 #include "Albany_Application.hpp"
 #include "AAdapt_RC_Manager.hpp"
+#include "Albany_DistributedParameterLibrary.hpp"
 #include "Albany_DiscretizationFactory.hpp"
 #include "Albany_ProblemFactory.hpp"
 #include "Albany_ResponseFactory.hpp"
@@ -165,7 +166,7 @@ void Albany::Application::initialSetUp(
     const RCP<Teuchos::ParameterList> &params) {
   // Create parameter libraries
   paramLib = rcp(new ParamLib);
-  distParamLib = rcp(new DistParamLib);
+  distParamLib = rcp(new DistributedParameterLibrary);
 
 #ifdef ALBANY_DEBUG
 #if defined(ALBANY_EPETRA)
@@ -845,38 +846,40 @@ void Albany::Application::finalSetUp(
       // Get name of distributed parameter
       const std::string &param_name = distParamSIS[is]->name;
 
-      // Get parameter maps and build parameter vector
-      Teuchos::RCP<Tpetra_Vector> dist_paramT, dist_param_lowerboundT, dist_param_upperboundT;
-      Teuchos::RCP<const Tpetra_Map> node_mapT, overlap_node_mapT;
-      node_mapT = disc->getMapT(
-          param_name); // Petra::EpetraMap_To_TpetraMap(node_map, commT);
-      overlap_node_mapT = disc->getOverlapMapT(
-          param_name); // Petra::EpetraMap_To_TpetraMap(overlap_node_map,
-                       // commT);
-      dist_paramT = Teuchos::rcp(new Tpetra_Vector(node_mapT));
-      dist_param_lowerboundT = Teuchos::rcp(new Tpetra_Vector(node_mapT));
-      dist_param_upperboundT = Teuchos::rcp(new Tpetra_Vector(node_mapT));
+      // Get parameter vector spaces and build parameter vector
+      // Create distributed parameter and set workset_elem_dofs
+      Teuchos::RCP<DistributedParameter> parameter(
+          new DistributedParameter(param_name, disc->getNodeVectorSpace(param_name), disc->getOverlapNodeVectorSpace(param_name)));
+      parameter->set_workset_elem_dofs(
+          Teuchos::rcpFromRef(disc->getElNodeEqID(param_name)));
+
+      // Get the vector and lower/upper bounds, and fill them with available data
+      Teuchos::RCP<Thyra_Vector> dist_param = parameter->vector();
+      Teuchos::RCP<Thyra_Vector> dist_param_lowerbound = parameter->lower_bounds_vector();
+      Teuchos::RCP<Thyra_Vector> dist_param_upperbound = parameter->upper_bounds_vector();
+
       std::stringstream lowerbound_name, upperbound_name;
       lowerbound_name << param_name << "_lowerbound";
       upperbound_name << param_name << "_upperbound";
 
       // Initialize parameter with data stored in the mesh
-      disc->getFieldT(*dist_paramT, param_name);
+      disc->getField(dist_param, param_name);
       const auto& nodal_param_states = disc->getNodalParameterSIS();
       bool has_lowerbound(false), has_upperbound(false);
       for (int is = 0; is < nodal_param_states.size(); is++) {
         has_lowerbound = has_lowerbound || (nodal_param_states[is]->name == lowerbound_name.str());
         has_upperbound = has_upperbound || (nodal_param_states[is]->name == upperbound_name.str());
       }
-      if(has_lowerbound)
-        disc->getFieldT(*dist_param_lowerboundT, lowerbound_name.str() );
-      else
-        dist_param_lowerboundT->putScalar(std::numeric_limits<ST>::lowest());
-      if(has_upperbound)
-        disc->getFieldT(*dist_param_upperboundT, upperbound_name.str());
-      else
-        dist_param_upperboundT->putScalar(std::numeric_limits<ST>::max());
-
+      if(has_lowerbound) {
+        disc->getField(dist_param_lowerbound, lowerbound_name.str() );
+      } else {
+        dist_param_lowerbound->assign(std::numeric_limits<ST>::lowest());
+      }
+      if(has_upperbound) {
+        disc->getField(*dist_param_upperboundT, upperbound_name.str());
+      } else {
+        dist_param_upperbound->assign(std::numeric_limits<ST>::max());
+      }
       // JR: for now, initialize to constant value from user input if requested.
       // This needs to be generalized.
       if (params->sublist("Problem").isType<Teuchos::ParameterList>(
@@ -889,17 +892,10 @@ void Albany::Application::finalSetUp(
                   "Distributed Parameter" &&
               topoParams.get<std::string>("Topology Name") == param_name) {
             double initVal = topoParams.get<double>("Initial Value");
-            dist_paramT->putScalar(initVal);
+            dist_param->assign(initVal);
           }
         }
       }
-
-      // Create distributed parameter and set workset_elem_dofs
-      Teuchos::RCP<TpetraDistributedParameter> parameter(
-          new TpetraDistributedParameter(param_name, dist_paramT, dist_param_lowerboundT, dist_param_upperboundT,
-                                         node_mapT, overlap_node_mapT));
-      parameter->set_workset_elem_dofs(
-          Teuchos::rcpFromRef(disc->getElNodeEqID(param_name)));
 
       // Add parameter to the distributed parameter library
       distParamLib->add(parameter->name(), parameter);
@@ -1127,7 +1123,7 @@ RCP<const Epetra_Vector> Albany::Application::getInitialSolutionDotDot() const {
 
 RCP<ParamLib> Albany::Application::getParamLib() const { return paramLib; }
 
-RCP<DistParamLib> Albany::Application::getDistParamLib() const {
+RCP<DistributedParameterLibrary> Albany::Application::getDistributedParameterLibrary() const {
   return distParamLib;
 }
 
@@ -2773,10 +2769,11 @@ void Albany::Application::applyGlobalDistParamDerivImpl(
         "> Albany Fill: Distributed Parameter Derivative Export");
     // Assemble global df/dp*V
     if (trans) {
-      // TODO: make DistParamLib Thyra
+      // TODO: make DistributedParameterLibrary Thyra
       Teuchos::RCP<const Thyra_MultiVector> temp = fpV->clone_mv();
-      distParamLib->get(dist_param_name)->export_add(*getTpetraMultiVector(fpV),
-                                                     *getConstTpetraMultiVector(overlapped_fpV));
+
+      distParamLib->get(dist_param_name)->get_cas_manager()->combine(overlapped_fpV,fpV,CombineMode::ADD);
+
       fpV->update(1.0, *temp); // fpV += temp;
 
       std::stringstream sensitivity_name;

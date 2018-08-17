@@ -4,26 +4,19 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-//IK, 9/12/14: no Epetra!
-
 #ifndef ALBANY_DISTRIBUTED_PARAMETER_DERIVATIVE_OP_T_HPP
 #define ALBANY_DISTRIBUTED_PARAMETER_DERIVATIVE_OP_T_HPP
 
-#include "Albany_DataTypes.hpp"
-#include "PHAL_AlbanyTraits.hpp" 
+#include "Albany_Application.hpp"
+#include "Albany_ThyraTypes.hpp"
 
 #include "Teuchos_RCP.hpp"
-#include "Teuchos_TestForException.hpp"
-
-#include "Albany_Application.hpp"
-
-#include "Albany_TpetraThyraUtils.hpp"
 
 namespace Albany {
 
-  //! Tpetra_Operator implementing the action of df/dp (transpose)
+  //! Thyra_LinearOp implementing the action of df/dp (transpose)
   /*!
-   * This class implements the Tpetra_Operator interface for
+   * This class implements the Thyra::LinearOpBase interface for
    * op(df/dp)*v where op() is the identity or tranpose, f is the Albany
    * residual vector, p is a distributed parameter vector, and v is a given
    * vector.
@@ -56,7 +49,7 @@ namespace Albany {
 
     //! Overrides Thyra::LinearOpBase purely virtual method
     Teuchos::RCP<const Thyra_VectorSpace> domain() const {
-      return Thyra::createVectorSpace<ST>(app->getDistParamLib()->get(param_name)->map());
+      return Thyra::createVectorSpace<ST>(app->getDistributedParameterLibrary()->get(param_name)->map());
     }
 
     //! Overrides Thyra::LinearOpBase purely virtual method
