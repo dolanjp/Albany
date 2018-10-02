@@ -168,13 +168,6 @@ Albany::AMPThermoMechanics::constructEvaluators(
       TEUCHOS_TEST_FOR_EXCEPTION(true,std::runtime_error,"*** Element block names must be Powder_Region or Solid_Region ***\n")
   }
   
- // check names of material names
-  std::string material_name;
-  material_name = material_db_->getElementBlockParam<std::string>(eb_name,"material");
-  if ( (material_name != "Solid") && (material_name != "Powder") ){
-      TEUCHOS_TEST_FOR_EXCEPTION(true,std::runtime_error,"*** Material name must be Powder or Solid ***\n")
-  }
- 
   RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> >
     intrepid_basis = Albany::getIntrepid2Basis(*elem_top);
 
@@ -365,6 +358,7 @@ Albany::AMPThermoMechanics::constructEvaluators(
 
     //Input
     p->set<string>("Coordinate Name","Coord Vec");
+    p->set<string>("Temperature Name","Temperature");
     p->set<Teuchos::ParameterList*>("Powder Parameter List", &param_list_powder);
     p->set<Teuchos::ParameterList*>("Solid Parameter List", &param_list_solid);
 

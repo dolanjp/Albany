@@ -72,6 +72,11 @@ buildProblem(
 
   if(meshSpecs[0]->nsNames.size() > 0)
     constructDirichletEvaluators(meshSpecs[0]->nsNames);
+    
+    //Temporary debugging printout
+
+   // std::cout << std::endl << "nsNames list printout" << std::endl;
+   // std::cout << std::endl << meshSpecs[0]->nsNames[0] << std::endl;
 
   if(meshSpecs[0]->ssNames.size() > 0)
     constructNeumannEvaluators(meshSpecs[0]);

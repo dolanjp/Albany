@@ -24,12 +24,15 @@ ThermalCond(Teuchos::ParameterList& p,
   k_          (p.get<std::string>("Thermal Conductivity Name"),
                dl->qp_scalar),
   psi_         (p.get<std::string>("Psi Name"),
-               dl->qp_scalar)      
-
+               dl->qp_scalar),
+  T_           (p.get<std::string>("Temperature Name"),
+               dl->qp_scalar)
 {
 
+  this->addDependentField(T_);
   this->addDependentField(coord_);
   this->addDependentField(psi_);
+  
   this->addEvaluatedField(k_);
  
   Teuchos::RCP<PHX::DataLayout> scalar_dl = dl->qp_scalar;
@@ -77,6 +80,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(coord_,fm);
   this->utils.setFieldData(psi_,fm);
   this->utils.setFieldData(k_,fm);
+  this->utils.setFieldData(T_, fm);
 }
 
 //**********************************************************************
@@ -87,12 +91,25 @@ evaluateFields(typename Traits::EvalData workset)
 {
 
     // thermal conductivity
+
+    //std::cout << "\n\n\n***NUMBER OF CELLS: " << workset.numCells < "\n";
+    //std::cout << "***NUMBER OF QPs: " << num_qps_ << "\n";
+
+
     for (std::size_t cell = 0; cell < workset.numCells; ++cell)
     {
         for (std::size_t qp = 0; qp < num_qps_; ++qp)
         {
-            k_(cell, qp) = (1.0 - psi_(cell, qp)) * powder_value_
-                    + psi_(cell, qp) * solid_value_;
+          // k_(cell, qp) = 7.7777 + 0.0222222*T_(cell, qp);
+           
+          // Thermal Conductivity Equation for IN718 material
+          k_(cell, qp) = (1.0 - psi_(cell, qp)) * powder_value_ +  psi_(cell, qp) * (0.0179 * T_(cell, qp) +4.69);
+          if (k_(cell,qp) > 29.6) k_(cell, qp) = 29.6;
+
+          //k_(cell, qp) = 10.7;
+
+          //k_(cell, qp) = (1.0 - psi_(cell, qp)) * powder_value_ +  psi_(cell, qp) * (20);
+          
         }
     }
 }

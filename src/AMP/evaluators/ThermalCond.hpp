@@ -56,6 +56,8 @@ private:
   PHX::MDField<MeshScalarT,Cell,QuadPoint,Dim> coord_;
   PHX::MDField<ScalarT,Cell,QuadPoint> k_;
   PHX::MDField<ScalarT,Cell,QuadPoint> psi_;
+  PHX::MDField<ScalarT,Cell,QuadPoint> T_;
+
 
   unsigned int num_qps_;
   unsigned int num_dims_;
