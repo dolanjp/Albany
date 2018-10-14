@@ -133,24 +133,14 @@ namespace AMP {
       }
     }
 
-    //    for (int cell = 0; cell < workset.numCells; ++cell) {
-    //      for (int qp = 0; qp < num_qps_; ++qp) {
-    //        for (int node = 0; node < num_nodes_; ++node) {
-    //          for (int i = 0; i < num_dims_; ++i) {
-    //             residual_(cell,node) += w_grad_bf_(cell,node,qp,i) * term1_(cell,qp,i);
-    //          }
-    //        }
-    //      }
-    //    }
-
     //THESE ARE HARD CODED NOW. NEEDS TO BE CHANGED TO USER INPUT LATER
     ScalarT Coeff_volExp = 65.2e-6; //per kelvins
     ScalarT Ini_temp = 300; //kelvins
    
     if (hasConsolidation_) {
       for (int cell = 0; cell < workset.numCells; ++cell) {
-	for (int qp = 0; qp < num_qps_; ++qp) {
-	  for (int node = 0; node < num_nodes_; ++node) {
+	   for (int qp = 0; qp < num_qps_; ++qp) {
+		for (int node = 0; node < num_nodes_; ++node) {
 	    //Use if consolidation and expansion is considered
 	    //  porosity_function1 = pow(	((1.0 - porosity_(cell, qp)) / ((1+Coeff_volExp*(T_(cell,qp) -Ini_temp))*(1.0 - Initial_porosity))), 2);
 	    //  porosity_function2 = (1+Coeff_volExp*(T_(cell,qp) -Ini_temp))*(1.0 - Initial_porosity) / (1.0 - porosity_(cell, qp));

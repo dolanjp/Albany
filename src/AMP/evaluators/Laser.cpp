@@ -29,7 +29,7 @@ namespace AMP
 	Data.x = x;
 	Data.y = y;
 	Data.power = power;
-        Data.power_fraction = power_fraction;
+    Data.power_fraction = power_fraction;
 	//
 	LaserData_.push_back(Data);
       }
