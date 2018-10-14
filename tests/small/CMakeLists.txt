@@ -4,7 +4,7 @@
 ##    in the file "license.txt" in the top-level Albany directory  //
 ##*****************************************************************//
 
-IF(ALBANY_HAVE_STK) # STK is needed for all these
+IF(ALBANY_STK) # STK is needed for all these
 
 # Heat Transfer Problems ###############
   add_subdirectory(SteadyHeat1D)
@@ -38,13 +38,15 @@ IF(ALBANY_HAVE_STK) # STK is needed for all these
     add_subdirectory(SteadyHeat2DSS)
   ENDIF(ALBANY_SEACAS)
 
-ENDIF(ALBANY_HAVE_STK)
+ENDIF(ALBANY_STK)
+
+add_subdirectory(Utils)
 
 IF(ALBANY_SCOREC)
   add_subdirectory(Heat3DPUMI)
 ENDIF()
 
-IF(ALBANY_HAVE_STK)
+IF(ALBANY_STK)
 # DEMO PDES ###############
 IF(ALBANY_DEMO_PDES)
   add_subdirectory(Helmholtz2D)
@@ -53,6 +55,7 @@ IF(ALBANY_DEMO_PDES)
   add_subdirectory(ReactDiffSystem)
   add_subdirectory(ComprNS)
   add_subdirectory(ODE)
+  add_subdirectory(ThermoElectrostatics2D)
   add_subdirectory(TekoPrec)
 
   # These require exodus, Ioss, stk_io, to read meshes
@@ -71,7 +74,7 @@ IF(ALBANY_DEMO_PDES)
 
 ENDIF(ALBANY_DEMO_PDES)
 
-ENDIF(ALBANY_HAVE_STK)
+ENDIF(ALBANY_STK)
 
 # LCM ###############
 
@@ -85,14 +88,7 @@ IF(ALBANY_GOAL)
   add_subdirectory(GOAL)
 ENDIF()
 
-IF(ALBANY_HAVE_STK)
-
-# QCAD ##################
-
-IF(ALBANY_QCAD AND ALBANY_SEACAS)
-  add_subdirectory(QCAD)
-  add_subdirectory(ThermoElectrostatics2D)
-ENDIF()
+IF(ALBANY_STK)
 
 # ATO ##################
 
@@ -100,24 +96,18 @@ IF(ALBANY_ATO)
   add_subdirectory(ATO)
 ENDIF()
 
-# FELIX ##################
+# LandIce ##################
 
-IF(ALBANY_FELIX AND ALBANY_SEACAS )
-  add_subdirectory(FELIX)
+IF(ALBANY_LANDICE AND ALBANY_SEACAS )
+  add_subdirectory(LandIce)
 ENDIF()
 
-# MOR   ##################
+# LandIce ##################
 
-IF(ALBANY_MOR AND ALBANY_EPETRA)
-  add_subdirectory(MOR)
+IF(ALBANY_TSUNAMI AND ALBANY_SEACAS )
+  add_subdirectory(Tsunami)
 ENDIF()
 
-# ANISO #################
-
-IF(ALBANY_ANISO)
-  add_subdirectory(ANISO)
-ENDIF(ALBANY_ANISO)
-
-ENDIF(ALBANY_HAVE_STK)
+ENDIF(ALBANY_STK)
 
 ###################

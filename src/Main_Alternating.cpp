@@ -7,6 +7,8 @@
 #include <iostream>
 #include <string>
 
+#include "Albany_config.h"
+
 #if defined(ALBANY_CHECK_FPE)
 #include <math.h>
 #include <xmmintrin.h>
@@ -27,6 +29,7 @@
 #include "Teuchos_FancyOStream.hpp"
 #include "Teuchos_GlobalMPISession.hpp"
 #include "Teuchos_ParameterList.hpp"
+#include "Teuchos_StackedTimer.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
 #include "Teuchos_TimeMonitor.hpp"
 #include "Teuchos_VerboseObject.hpp"
@@ -124,20 +127,19 @@ int main(int ac, char *av[])
 
   cmd.parse_cmdline(ac, av, *fos);
 
-  auto
-  total_time = Teuchos::TimeMonitor::getNewTimer("Albany: Total Time");
+  const auto stackedTimer = Teuchos::rcp(
+      new Teuchos::StackedTimer("Albany Stacked Timer"));
+  Teuchos::TimeMonitor::setStackedTimer(stackedTimer);
 
   auto
-  setup_time = Teuchos::TimeMonitor::getNewTimer("Albany: Setup Time");
-
-  Teuchos::TimeMonitor
-  total_timer(*total_time);
-
-  Teuchos::TimeMonitor
-  setup_timer(*setup_time);
+  totalTimer = Teuchos::rcp(new Teuchos::TimeMonitor(
+      *Teuchos::TimeMonitor::getNewTimer("Albany: Total Time")));
+  auto
+  setupTimer = Teuchos::rcp(new Teuchos::TimeMonitor(
+      *Teuchos::TimeMonitor::getNewTimer("Albany: Setup Time")));
 
   auto
-  comm = Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
+  comm = Tpetra::getDefaultComm();
 
   // Connect vtune for performance profiling
   if (cmd.vtune == true) {
@@ -176,7 +178,11 @@ int main(int ac, char *av[])
 
   *fos << "Schwarz alternating method" << std::endl;
 
-  Teuchos::TimeMonitor::summarize(*fos, false, true, false);
+  stackedTimer->stop("Albany Stacked Timer");
+  Teuchos::StackedTimer::OutputOptions options;
+  options.output_fraction = true;
+  options.output_minmax = true;
+  stackedTimer->report(std::cout, Teuchos::DefaultComm<int>::getComm(), options);
 
   Kokkos::finalize_all();
 

@@ -16,11 +16,13 @@
 
 #include "Teuchos_FancyOStream.hpp"
 #include "Teuchos_GlobalMPISession.hpp"
+#include "Teuchos_StackedTimer.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
 #include "Teuchos_TimeMonitor.hpp"
 #include "Teuchos_VerboseObject.hpp"
 #include "Thyra_DefaultProductVector.hpp"
 #include "Thyra_DefaultProductVectorSpace.hpp"
+#include "MatrixMarket_Tpetra.hpp"
 
 // Uncomment for run time nan checking
 // This is set in the toplevel CMakeLists.txt file
@@ -288,17 +290,18 @@ main(int argc, char *argv[]) {
   Albany::CmdLineArgs cmd;
   cmd.parse_cmdline(argc, argv, *out);
 
-  try {
-    RCP<Teuchos::Time> totalTime =
-        Teuchos::TimeMonitor::getNewTimer("Albany: ***Total Time***");
+  const auto stackedTimer = Teuchos::rcp(
+      new Teuchos::StackedTimer("Albany Stacked Timer"));
+  Teuchos::TimeMonitor::setStackedTimer(stackedTimer);
 
-    RCP<Teuchos::Time> setupTime =
-        Teuchos::TimeMonitor::getNewTimer("Albany: Setup Time");
-    Teuchos::TimeMonitor totalTimer(*totalTime);  // start timer
-    Teuchos::TimeMonitor setupTimer(*setupTime);  // start timer
+  try {
+    auto totalTimer = Teuchos::rcp(new Teuchos::TimeMonitor(
+        *Teuchos::TimeMonitor::getNewTimer("Albany: Total Time")));
+    auto setupTimer = Teuchos::rcp(new Teuchos::TimeMonitor(
+        *Teuchos::TimeMonitor::getNewTimer("Albany: Setup Time")));
 
     RCP<const Teuchos_Comm> comm =
-        Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
+        Tpetra::getDefaultComm();
 
     // Connect vtune for performance profiling
     if (cmd.vtune) { Albany::connect_vtune(comm->getRank()); }
@@ -308,7 +311,7 @@ main(int argc, char *argv[]) {
     const RCP<Thyra::ResponseOnlyModelEvaluatorBase<ST>> solver =
         slvrfctry.createAndGetAlbanyAppT(app, comm, comm);
 
-    setupTimer.~TimeMonitor();
+    setupTimer = Teuchos::null;
 
     std::string solnMethod =
         slvrfctry.getParameters().sublist("Problem").get<std::string>(
@@ -444,7 +447,7 @@ main(int argc, char *argv[]) {
         response_names[l] = Teuchos::null;
     }
 
-    const Thyra::ModelEvaluatorBase::InArgs<double> nominal =
+    const Thyra::ModelEvaluatorBase::InArgs<ST> nominal =
         solver->getNominalValues();
 
     // Check if parameters are product vectors or regular vectors
@@ -461,9 +464,14 @@ main(int argc, char *argv[]) {
                                       // everything except CoupledSchwarz right
                                       // now)
         for (int i = 0; i < num_p; i++) {
-          Albany::printTpetraVector(
-              *out << "\nParameter vector " << i << ":\n", *param_names[i],
-              ConverterT::getConstTpetraVector(nominal.get_p(i)));
+          if(i < num_param_vecs)
+            Albany::printTpetraVector(
+            *out << "\nParameter vector " << i << ":\n", *param_names[i],
+                            ConverterT::getConstTpetraVector(nominal.get_p(i)));
+          else { //distributed parameter
+            ST norm2 = ConverterT::getConstTpetraVector(nominal.get_p(i))->norm2();
+            *out << "\nDistributed Parameter " << i << ", (two-norm): "  << norm2 << std::endl;
+          }
         }
       } else {  // Thyra product vector case
         for (int i = 0; i < num_p; i++) {
@@ -478,7 +486,7 @@ main(int argc, char *argv[]) {
           // moment so we cannot
           // allow for different parameters in different models.
           Teuchos::RCP<const Tpetra_Vector> p =
-              Teuchos::rcp_dynamic_cast<const ThyraVector>(
+              Teuchos::rcp_dynamic_cast<const Thyra_TpetraVector>(
                   pT->getVectorBlock(0), true)
                   ->getConstTpetraVector();
           Albany::printTpetraVector(
@@ -492,22 +500,39 @@ main(int argc, char *argv[]) {
       if (!app->getResponse(i)->isScalarResponse()) continue;
 
       if (response_names[i] != Teuchos::null) {
-        *out << "\n Response vector " << i << ": " << *response_names[i]
+        *out << "\nResponse vector " << i << ": " << *response_names[i]
              << "\n";
       } else {
-        *out << "\n Response vector " << i << ":\n";
+        *out << "\nResponse vector " << i << ":\n";
       }
       Albany::printTpetraVector(*out, g);
 
-      status += slvrfctry.checkSolveTestResultsT(i, 0, g.get(), NULL);
-
-      for (int j = 0; j < num_p; j++) {
+      for (int j=0; j<num_p; j++) {
         const RCP<const Tpetra_MultiVector> dgdp = sensitivities[i][j];
         if (Teuchos::nonnull(dgdp)) {
-          Albany::printTpetraVector(
-              *out << "\nSensitivities (" << i << "," << j << "):!\n", dgdp);
-          status += slvrfctry.checkSolveTestResultsT(i, j, g.get(), dgdp.get());
+          if(j < num_param_vecs) {
+            Albany::printTpetraVector(
+                *out << "\nSensitivities (" << i << "," << j << "):!\n", dgdp);
+                //check response and sensitivities for scalar parameters
+                status += slvrfctry.checkSolveTestResultsT(i, j, g.get(), dgdp.get());
+          }
+          else {
+            const RCP<const Tpetra_Map> serial_map = Teuchos::rcp(new const Tpetra_Map(INVALID, 1, 0, comm));
+            Tpetra_MultiVector norms(serial_map,dgdp->getNumVectors());
+            *out << "\nSensitivities (" << i << "," << j  << ") for Distributed Parameters:  (two-norm)\n";
+            *out << "    ";
+            for(int ir=0; ir<dgdp->getNumVectors(); ++ir) {
+            auto norm2 = dgdp->getVector(ir)->norm2();
+            norms.getDataNonConst(ir)[0] = norm2;
+              *out << "    " << norm2;
+            }
+            *out << "\n" << std::endl;
+            //check response and sensitivities for distributed parameters
+            status += slvrfctry.checkSolveTestResultsT(i, j, g.get(), &norms);
+          }
         }
+        else //check response only, no sensitivities
+          status += slvrfctry.checkSolveTestResultsT(i, 0, g.get(), NULL);
       }
     }
 
@@ -526,7 +551,7 @@ main(int argc, char *argv[]) {
           debugParams.get("Write Solution to Standard Output", false);
 
       const RCP<const Tpetra_Vector> xfinal = responses.back();
-      double mnv = xfinal->meanValue();
+      auto mnv = xfinal->meanValue();
       *out << "\nMain_Solve: MeanValue of final solution " << mnv << std::endl;
       *out << "\nNumber of Failed Comparisons: " << status << std::endl;
       if (writeToCoutSoln == true) {
@@ -554,13 +579,13 @@ main(int argc, char *argv[]) {
         xfinal_serial->doImport(*xfinal, *importOperator, Tpetra::INSERT);
 
         // writing to MatrixMarket file
-        Tpetra_MatrixMarket_Writer::writeDenseFile("xfinal.mm", xfinal_serial);
+        Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("xfinal.mm", xfinal_serial);
       }
       if (writeToMatrixMarketDistrSolnMap == true) {
         // writing to MatrixMarket file
-        Tpetra_MatrixMarket_Writer::writeDenseFile(
+        Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile(
             "xfinal_distributed.mm", *xfinal);
-        Tpetra_MatrixMarket_Writer::writeMapFile(
+        Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeMapFile(
             "xfinal_distributed_map.mm", *xfinal->getMap());
       }
     }
@@ -568,7 +593,11 @@ main(int argc, char *argv[]) {
   TEUCHOS_STANDARD_CATCH_STATEMENTS(true, std::cerr, success);
   if (!success) status += 10000;
 
-  Teuchos::TimeMonitor::summarize(*out, false, true, false /*zero timers*/);
+  stackedTimer->stop("Albany Stacked Timer");
+  Teuchos::StackedTimer::OutputOptions options;
+  options.output_fraction = true;
+  options.output_minmax = true;
+  stackedTimer->report(std::cout, Teuchos::DefaultComm<int>::getComm(), options);
 
 #ifdef ALBANY_APF
   Albany::APFMeshStruct::finalize_libraries();

@@ -5,6 +5,17 @@
 //*****************************************************************//
 
 #include "Albany_Utils.hpp"
+
+// Include the concrete Epetra Comm's, if needed
+#if defined(ALBANY_EPETRA)
+  #ifdef ALBANY_MPI
+    #include "Epetra_MpiComm.h"
+  #else
+    #include "Epetra_SerialComm.h"
+  #endif
+#endif
+
+#include "MatrixMarket_Tpetra.hpp"
 #include "Teuchos_TestForException.hpp"
 #include <cstdlib>
 #include <stdexcept>
@@ -42,32 +53,51 @@
         }
       }
     }
-    //Tpetra_MatrixMarket_Writer::writeSparseFile("prec.mm", matrix);
+    //Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeSparseFile("prec.mm", matrix);
   }
 
   void 
-  Albany::InvRowSum(Teuchos::RCP<Tpetra_Vector>& rowSumsTpetra, const Teuchos::RCP<Tpetra_CrsMatrix> matrix) {
-    //Check that rowSumsTpetra and matrix have same map 
-    ALBANY_ASSERT(rowSumsTpetra->getMap()->isSameAs(*(matrix->getRowMap())), 
-			 "Error in Albany::InvRowSum!  "
+  Albany::InvAbsRowSum(Teuchos::RCP<Tpetra_Vector>& invAbsRowSumsTpetra, const Teuchos::RCP<Tpetra_CrsMatrix> matrix) {
+    //Check that invAbsRowSumsTpetra and matrix have same map 
+    ALBANY_ASSERT(invAbsRowSumsTpetra->getMap()->isSameAs(*(matrix->getRowMap())), 
+			 "Error in Albany::InvAbsRowSum!  "
 			 "Input vector must have same map as row map of input matrix!");
-    rowSumsTpetra->putScalar(0.0);
-    Teuchos::ArrayRCP<double> rowSumsTpetra_nonconstView = rowSumsTpetra->get1dViewNonConst(); 
-    for (auto row=0; row<rowSumsTpetra->getLocalLength(); row++) {
+    invAbsRowSumsTpetra->putScalar(0.0);
+    Teuchos::ArrayRCP<double> invAbsRowSumsTpetra_nonconstView = invAbsRowSumsTpetra->get1dViewNonConst(); 
+    for (auto row=0; row<invAbsRowSumsTpetra->getLocalLength(); row++) {
       auto numEntriesRow = matrix->getNumEntriesInLocalRow(row); 
       Teuchos::Array<LO> indices(numEntriesRow); 
       Teuchos::Array<ST> values(numEntriesRow); 
       matrix->getLocalRowCopy(row, indices(), values(), numEntriesRow);
       ST scale = 0.0; 
       for (auto j=0; j < numEntriesRow; j++) scale += std::abs(values[j]);
-      if (scale < 1.0e-16) rowSumsTpetra_nonconstView[row] = 0.0; 
-      else rowSumsTpetra_nonconstView[row] = 1.0/scale; 
+      if (scale < 1.0e-16) invAbsRowSumsTpetra_nonconstView[row] = 0.0; 
+      else invAbsRowSumsTpetra_nonconstView[row] = 1.0/scale; 
+    }
+  }
+
+  void 
+  Albany::AbsRowSum(Teuchos::RCP<Tpetra_Vector>& absRowSumsTpetra, const Teuchos::RCP<Tpetra_CrsMatrix> matrix) {
+    //Check that absRowSumsTpetra and matrix have same map 
+    ALBANY_ASSERT(absRowSumsTpetra->getMap()->isSameAs(*(matrix->getRowMap())), 
+			 "Error in Albany::AbsRowSum!  "
+			 "Input vector must have same map as row map of input matrix!");
+    absRowSumsTpetra->putScalar(0.0);
+    Teuchos::ArrayRCP<double> absRowSumsTpetra_nonconstView = absRowSumsTpetra->get1dViewNonConst(); 
+    for (auto row=0; row<absRowSumsTpetra->getLocalLength(); row++) {
+      auto numEntriesRow = matrix->getNumEntriesInLocalRow(row); 
+      Teuchos::Array<LO> indices(numEntriesRow); 
+      Teuchos::Array<ST> values(numEntriesRow); 
+      matrix->getLocalRowCopy(row, indices(), values(), numEntriesRow);
+      ST scale = 0.0; 
+      for (auto j=0; j < numEntriesRow; j++) scale += std::abs(values[j]);
+      absRowSumsTpetra_nonconstView[row] = scale; 
     }
   }
 
 
-//IKT, FIXME: ultimately remove || defined(ALBANY_ATO) from following line 
-#if defined(ALBANY_EPETRA) || defined(ALBANY_ATO) 
+
+#if defined(ALBANY_EPETRA)  
   Albany_MPI_Comm Albany::getMpiCommFromEpetraComm(const Epetra_Comm& ec) {
     const Epetra_MpiComm& emc = dynamic_cast<const Epetra_MpiComm&>(ec);
     return emc.Comm();
@@ -282,7 +312,7 @@
     std::string const &
     filename = oss.str();
 
-    Tpetra_MatrixMarket_Writer::writeDenseFile(filename, x);
+    Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile(filename, x);
 
     return;
   }
@@ -312,7 +342,7 @@
     std::string const &
     filename = oss.str();
 
-    Tpetra_MatrixMarket_Writer::writeSparseFile(filename, A);
+    Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeSparseFile(filename, A);
 
     return;
   }

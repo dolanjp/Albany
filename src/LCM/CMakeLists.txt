@@ -68,7 +68,7 @@ set(evaluator-headers
 
 #LCM model evaluators
 
-IF (ALBANY_HAVE_STK)
+IF (ALBANY_STK)
 set(model-eval-sources
   "${LCM_DIR}/solvers/Schwarz_Alternating.cpp"
   "${LCM_DIR}/solvers/Schwarz_ObserverImpl.cpp"
@@ -91,21 +91,42 @@ set(model-eval-headers
     "${LCM_DIR}/solvers/Schwarz_CoupledJacobian.hpp"
     "${LCM_DIR}/solvers/Schwarz_Coupled.hpp"
   )
-ENDIF(ALBANY_HAVE_STK)
+ENDIF(ALBANY_STK)
 
 # LCM ACE evaluators
 set(ace-sources
   "${LCM_DIR}/evaluators/ACE/ACEdensity.cpp"
+  "${LCM_DIR}/evaluators/ACE/ACEfreezingCurve.cpp"
   "${LCM_DIR}/evaluators/ACE/ACEheatCapacity.cpp"
+  "${LCM_DIR}/evaluators/ACE/ACEiceSaturation.cpp"
+  "${LCM_DIR}/evaluators/ACE/ACEmeltingTemperature.cpp"
+  "${LCM_DIR}/evaluators/ACE/ACEporosity.cpp"
+  "${LCM_DIR}/evaluators/ACE/ACEtemperatureChange.cpp"
   "${LCM_DIR}/evaluators/ACE/ACEthermalConductivity.cpp"
+  "${LCM_DIR}/evaluators/ACE/ACEthermalInertia.cpp"
+  "${LCM_DIR}/evaluators/ACE/ACEwaterSaturation.cpp"
 )
 set(ace-headers
   "${LCM_DIR}/evaluators/ACE/ACEdensity.hpp"
   "${LCM_DIR}/evaluators/ACE/ACEdensity_Def.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEfreezingCurve.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEfreezingCurve_Def.hpp"
   "${LCM_DIR}/evaluators/ACE/ACEheatCapacity.hpp"
   "${LCM_DIR}/evaluators/ACE/ACEheatCapacity_Def.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEiceSaturation.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEiceSaturation_Def.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEmeltingTemperature.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEmeltingTemperature_Def.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEporosity.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEporosity_Def.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEtemperatureChange.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEtemperatureChange_Def.hpp"
   "${LCM_DIR}/evaluators/ACE/ACEthermalConductivity.hpp"
   "${LCM_DIR}/evaluators/ACE/ACEthermalConductivity_Def.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEthermalInertia.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEthermalInertia_Def.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEwaterSaturation.hpp"
+  "${LCM_DIR}/evaluators/ACE/ACEwaterSaturation_Def.hpp"
 )
 
 # LCM special boundary conditions
@@ -113,8 +134,6 @@ set(bc-sources
   "${LCM_DIR}/evaluators/bc/EquilibriumConcentrationBC.cpp"
   "${LCM_DIR}/evaluators/bc/KfieldBC.cpp"
   "${LCM_DIR}/evaluators/bc/RigidContactBC.cpp"
-  "${LCM_DIR}/evaluators/bc/TimeDepBC.cpp"
-  "${LCM_DIR}/evaluators/bc/TimeDepSDBC.cpp"
   "${LCM_DIR}/evaluators/bc/TimeTracBC.cpp"
   "${LCM_DIR}/evaluators/bc/TorsionBC.cpp"
 )
@@ -125,16 +144,12 @@ set(bc-headers
   "${LCM_DIR}/evaluators/bc/KfieldBC.hpp"
   "${LCM_DIR}/evaluators/bc/RigidContactBC_Def.hpp"
   "${LCM_DIR}/evaluators/bc/RigidContactBC.hpp"
-  "${LCM_DIR}/evaluators/bc/TimeDepBC_Def.hpp"
-  "${LCM_DIR}/evaluators/bc/TimeDepBC.hpp"
-  "${LCM_DIR}/evaluators/bc/TimeDepSDBC_Def.hpp"
-  "${LCM_DIR}/evaluators/bc/TimeDepSDBC.hpp"
   "${LCM_DIR}/evaluators/bc/TimeTracBC_Def.hpp"
   "${LCM_DIR}/evaluators/bc/TimeTracBC.hpp"
   "${LCM_DIR}/evaluators/bc/TorsionBC_Def.hpp"
   "${LCM_DIR}/evaluators/bc/TorsionBC.hpp"
 )
-IF (ALBANY_HAVE_STK)
+IF (ALBANY_STK)
   set(bc-sources ${bc-sources}
     "${LCM_DIR}/evaluators/bc/PDNeighborFitBC.cpp"
     "${LCM_DIR}/evaluators/bc/SchwarzBC.cpp"
@@ -148,21 +163,7 @@ IF (ALBANY_HAVE_STK)
     "${LCM_DIR}/evaluators/bc/StrongSchwarzBC.hpp"
     "${LCM_DIR}/evaluators/bc/StrongSchwarzBC_Def.hpp"
   )
-ENDIF (ALBANY_HAVE_STK)
-
-# LCM contact
-IF (ALBANY_CONTACT)
-  set(contact-sources
-    "${LCM_DIR}/evaluators/contact/MortarContactConstraints.cpp"
-    "${LCM_DIR}/evaluators/contact/MortarContactResidual.cpp"
-  )
-  set(contact-headers
-    "${LCM_DIR}/evaluators/contact/MortarContactConstraints_Def.hpp"
-    "${LCM_DIR}/evaluators/contact/MortarContactConstraints.hpp"
-    "${LCM_DIR}/evaluators/contact/MortarContactResidual_Def.hpp"
-    "${LCM_DIR}/evaluators/contact/MortarContactResidual.hpp"
-  )
-ENDIF (ALBANY_CONTACT)
+ENDIF (ALBANY_STK)
 
 # LCM HMC evaluators
 set(hmc-sources
@@ -297,7 +298,7 @@ set(residual-sources
   "${LCM_DIR}/evaluators/residuals/ElasticityResid.cpp"
   "${LCM_DIR}/evaluators/residuals/ElectrostaticResidual.cpp"
   "${LCM_DIR}/evaluators/residuals/HDiffusionDeformationMatterResidual.cpp"
-  "${LCM_DIR}/evaluators/residuals/HeatEqnResidual.cpp"
+  "${LCM_DIR}/evaluators/residuals/ACETemperatureResidual.cpp"
   "${LCM_DIR}/evaluators/residuals/MechanicsResidual.cpp"
   "${LCM_DIR}/evaluators/residuals/StabilizedPressureResidual.cpp"
   "${LCM_DIR}/evaluators/residuals/TLElasResid.cpp"
@@ -311,7 +312,8 @@ set(residual-headers
   "${LCM_DIR}/evaluators/residuals/ElectrostaticResidual_Def.hpp"
   "${LCM_DIR}/evaluators/residuals/HDiffusionDeformationMatterResidual.hpp"
   "${LCM_DIR}/evaluators/residuals/HDiffusionDeformationMatterResidual_Def.hpp"
-  "${LCM_DIR}/evaluators/residuals/HeatEqnResidual.hpp"
+  "${LCM_DIR}/evaluators/residuals/ACETemperatureResidual.hpp"
+  "${LCM_DIR}/evaluators/residuals/ACETemperatureResidual_Def.hpp"
   "${LCM_DIR}/evaluators/residuals/MechanicsResidual.hpp"
   "${LCM_DIR}/evaluators/residuals/MechanicsResidual_Def.hpp"
   "${LCM_DIR}/evaluators/residuals/StabilizedPressureResidual.hpp"
@@ -574,7 +576,7 @@ set(utils-headers
   "${LCM_DIR}/utils/Projection.hpp"
   "${LCM_DIR}/utils/SolutionSniffer.hpp"
 )
-IF(ALBANY_HAVE_STK)
+IF(ALBANY_STK)
   set(utils-sources ${utils-sources}
     "${LCM_DIR}/utils/LCMPartition.cpp"
     "${LCM_DIR}/utils/MiniLinearSolver.cpp"
@@ -596,10 +598,10 @@ IF(ALBANY_HAVE_STK)
       "${LCM_DIR}/utils/PeridigmManager.hpp"
     )
   ENDIF(ALBANY_PERIDIGM AND ALBANY_EPETRA)
-ENDIF(ALBANY_HAVE_STK)
+ENDIF(ALBANY_STK)
 
 #LCM utils/topology
-IF(ALBANY_HAVE_STK)
+IF(ALBANY_STK)
   set(topology-sources
     "${LCM_DIR}/utils/topology/BarycentricSubdivision.cpp"
     "${LCM_DIR}/utils/topology/MinimumSurface.cpp"
@@ -631,7 +633,6 @@ set(SOURCES ${SOURCES}
   ${models-sources}
   ${utils-sources}
   ${topology-sources}
-  ${contact-sources}
   ${residual-sources}
   ${lin-sources}
   ${proj-sources}
@@ -653,7 +654,6 @@ set(HEADERS ${HEADERS}
   ${models-headers}
   ${utils-headers}
   ${topology-headers}
-  ${contact-headers}
   ${residual-headers}
   ${lin-headers}
   ${proj-headers}
@@ -705,7 +705,6 @@ set(INCLUDE_DIRS
   ${LCM_DIR}/evaluators
   ${LCM_DIR}/evaluators/ACE
   ${LCM_DIR}/evaluators/bc
-  ${LCM_DIR}/evaluators/contact
   ${LCM_DIR}/evaluators/HMC
   ${LCM_DIR}/evaluators/kinematics
   ${LCM_DIR}/evaluators/lame

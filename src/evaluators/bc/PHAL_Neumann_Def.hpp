@@ -3,8 +3,6 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-//IK, 9/13/14: only Epetra is SG and MP
-
 #include "Teuchos_TestForException.hpp"
 #include "Phalanx_DataLayout.hpp"
 #include <string>
@@ -30,6 +28,9 @@ NeumannBase(const Teuchos::ParameterList& p) :
   sideSetID      (p.get<std::string>("Side Set ID")),
   coordVec       (p.get<std::string>("Coordinate Vector Name"), dl->vertices_vector)
 {
+  if (p.isType<bool>("Enable Memoizer") && p.get<bool>("Enable Memoizer"))
+    memoizer.enable_memoizer();
+
   useGLP = false;
   // the input.xml string "NBC on SS sidelist_12 for DOF T set dudn" (or something like it)
   name = p.get< std::string >("Neumann Input String");
@@ -65,17 +66,17 @@ NeumannBase(const Teuchos::ParameterList& p) :
       const_val = inputValues[0];
       this->registerSacadoParameter(name, paramLib);
     }
-	else if(inputConditions == "radiate" ) { 
+  else if(inputConditions == "radiate" ) {
       bc_type = STEFAN_BOLTZMANN;
       robin_vals[0] = inputValues[0]; // dof_value
-      robin_vals[1] = inputValues[1]; // coeff multiplying difference (dof^4 - dof_value^4) 
+      robin_vals[1] = inputValues[1]; // coeff multiplying difference (dof^4 - dof_value^4)
 
       for(int i = 0; i < 2; i++) {
         std::stringstream ss; ss << name << "[" << i << "]";
         this->registerSacadoParameter(ss.str(), paramLib);
       }
     }
-    else { // inputConditions == "robin" 
+    else { // inputConditions == "robin"
       bc_type = ROBIN;
       robin_vals[0] = inputValues[0]; // dof_value
       robin_vals[1] = inputValues[1]; // coeff multiplying difference (dof - dof_value) -- could be permittivity/distance (distance in mesh units)
@@ -159,7 +160,7 @@ NeumannBase(const Teuchos::ParameterList& p) :
       this->registerSacadoParameter(name, paramLib);
 
   }
-  else if(inputConditions == "basal"){ // Basal boundary condition for FELIX
+  else if(inputConditions == "basal"){ // Basal boundary condition for LandIce
       rho = p.get<double>("Ice Density");
       rho_w = p.get<double>("Water Density");
       useGLP = p.get<bool>("Use GLP");
@@ -188,7 +189,7 @@ NeumannBase(const Teuchos::ParameterList& p) :
       }
        dofVec = decltype(dofVec)(p.get<std::string>("DOF Name"),
            p.get<Teuchos::RCP<PHX::DataLayout> >("DOF Data Layout"));
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
       beta_field = decltype(beta_field)(
         p.get<std::string>("Beta Field Name"), dl->node_scalar);
       thickness_field = decltype(thickness_field)(
@@ -225,19 +226,19 @@ NeumannBase(const Teuchos::ParameterList& p) :
         beta_type = POWERLAW_SCALAR_FIELD;
       else if (betaName == "Exponent Of Scalar Field Times Thickness")
         beta_type = EXP_SCALAR_FIELD_THK;
-      else if (betaName == "FELIX XZ MMS")
-        beta_type = FELIX_XZ_MMS;
+      else if (betaName == "LandIce XZ MMS")
+        beta_type = LANDICE_XZ_MMS;
       else TEUCHOS_TEST_FOR_EXCEPTION(true,Teuchos::Exceptions::InvalidParameter,
         std::endl << "The BetaXY name: \"" << betaName << "\" is not a valid name" << std::endl);
 
       this->addDependentField(dofVec);
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
       this->addDependentField(beta_field);
       this->addDependentField(thickness_field);
       this->addDependentField(bedTopo_field);
 #endif
   }
-  else if(inputConditions == "basal_scalar_field"){ // Basal boundary condition for FELIX, where the basal sliding coefficient is a scalar field
+  else if(inputConditions == "basal_scalar_field"){ // Basal boundary condition for LandIce, where the basal sliding coefficient is a scalar field
       stereographicMapList = p.get<Teuchos::ParameterList*>("Stereographic Map");
       useStereographicMap = stereographicMapList->get("Use Stereographic Map", false);
 
@@ -255,13 +256,13 @@ NeumannBase(const Teuchos::ParameterList& p) :
       dofVec = decltype(dofVec)(p.get<std::string>("DOF Name"),
           p.get<Teuchos::RCP<PHX::DataLayout> >("DOF Data Layout"));
       this->addDependentField(dofVec);
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
       beta_field = decltype(beta_field)(
                     p.get<std::string>("Beta Field Name"), dl->node_scalar);
       this->addDependentField(beta_field);
 #endif
   }
-  else if(inputConditions == "lateral"){ // Basal boundary condition for FELIX
+  else if(inputConditions == "lateral"){ // Basal boundary condition for LandIce
        stereographicMapList = p.get<Teuchos::ParameterList*>("Stereographic Map");
        useStereographicMap = stereographicMapList->get("Use Stereographic Map", false);
        if(useStereographicMap)
@@ -281,8 +282,8 @@ NeumannBase(const Teuchos::ParameterList& p) :
 
       int numInputs = inputValues.size(); //number of arguments user entered at command line.
 
-      //The following is for backward compatibility: the lateral BC used to have 5 inputs, now really it has 1. 
-      for (int i = numInputs; i < 5; i++) 
+      //The following is for backward compatibility: the lateral BC used to have 5 inputs, now really it has 1.
+      for (int i = numInputs; i < 5; i++)
         robin_vals[i] = 0.0;
 
       //The following should really go to 1 but above backward compatibility line keeps this at length 5.
@@ -293,7 +294,7 @@ NeumannBase(const Teuchos::ParameterList& p) :
         dofVec = decltype(dofVec)(p.get<std::string>("DOF Name"),
              p.get<Teuchos::RCP<PHX::DataLayout> >("DOF Data Layout"));
         this->addDependentField(dofVec);
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
         thickness_field = decltype(thickness_field)(
           p.get<std::string>("thickness Field Name"), dl->node_scalar);
         elevation_field = decltype(elevation_field)(
@@ -383,7 +384,7 @@ postRegistrationSetup(typename Traits::SetupData d,
     this->utils.setFieldData(dof,fm);
     dofSide_buffer = Kokkos::createDynRankView(dof.get_view(), "dofSide", numCells*maxNumQpSide);
   }
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
   else if (inputConditions == "basal" || inputConditions == "basal_scalar_field")
   {
     this->utils.setFieldData(dofVec,fm);
@@ -446,6 +447,7 @@ template<typename EvalT, typename Traits>
 void NeumannBase<EvalT, Traits>::
 evaluateNeumannContribution(typename Traits::EvalData workset)
 {
+  if (memoizer.have_stored_data(workset)) return;
 
   // setJacobian only needs to be RealType since the data type is only
   //  used internally for Basis Fns on reference elements, which are
@@ -488,19 +490,19 @@ evaluateNeumannContribution(typename Traits::EvalData workset)
          (coordVec.get_view(), "DDN", numCells, numNodes, numDOFsSet);
        break;
     case BASAL:
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
        neumann = Kokkos::createDynRankViewWithType<Kokkos::DynRankView<ScalarT, PHX::Device> >
          (dofVec.get_view(), "DDN", numCells, numNodes, numDOFsSet);
 #endif
        break;
     case BASAL_SCALAR_FIELD:
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
        neumann = Kokkos::createDynRankViewWithType<Kokkos::DynRankView<ScalarT, PHX::Device> >
          (dofVec.get_view(), "DDN", numCells, numNodes, numDOFsSet);
 #endif
        break;
     case LATERAL:
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
        neumann = Kokkos::createDynRankViewWithType<Kokkos::DynRankView<ScalarT, PHX::Device> >
          (dofVec.get_view(), "DDN", numCells, numNodes, numDOFsSet);
 #endif
@@ -700,7 +702,7 @@ evaluateNeumannContribution(typename Traits::EvalData workset)
 
       for (std::size_t node=0; node < numNodes; ++node)
       {
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
         for (std::size_t iCell=0; iCell < numCells_; ++iCell)
           betaOnCell(iCell,node) = beta_field(cellVec(iCell),node);
         if(bc_type == BASAL) {
@@ -747,7 +749,7 @@ evaluateNeumannContribution(typename Traits::EvalData workset)
       //Intrepid2::FunctionSpaceTools<PHX::Device>::
         //evaluate(dofSide, dofCell, trans_basis_refPointsSide);
     }
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
     else if(bc_type == LATERAL) {
           dofCellVec = Kokkos::createViewWithType<DynRankViewScalarT>(dofCellVec_buffer, dofCellVec_buffer.data(), numCells_, numNodes, numDOFsSet);
           thicknessOnSide = Kokkos::createViewWithType<DynRankViewScalarT>(thicknessOnSide_buffer, thicknessOnSide_buffer.data(), numCells_, numQPsSide);
@@ -803,7 +805,7 @@ evaluateNeumannContribution(typename Traits::EvalData workset)
          calc_dudn_robin(data, physPointsSide, dofSide, jacobianSide, *cellType, cellDims, side, elem_scale, robin_vals);
          break;
        }
-	   
+
       case STEFAN_BOLTZMANN:
        {
          const ScalarT elem_scale = matScaling[ebIndexVec[iblock]];
@@ -823,21 +825,21 @@ evaluateNeumannContribution(typename Traits::EvalData workset)
 
       case BASAL:
 
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
          calc_dudn_basal(data, physPointsSide, betaOnSide, thicknessOnSide, bedTopoOnSide, dofSideVec, jacobianSide, *cellType, cellDims, side);
 #endif
          break;
 
       case BASAL_SCALAR_FIELD:
 
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
          calc_dudn_basal_scalar_field(data, physPointsSide, betaOnSide, dofSideVec, jacobianSide, *cellType, cellDims, side);
 #endif
          break;
 
       case LATERAL:
 
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
          calc_dudn_lateral(data, physPointsSide, thicknessOnSide, elevationOnSide, dofSideVec, jacobianSide, *cellType, cellDims, side);
 #endif
          break;
@@ -1070,60 +1072,20 @@ calc_press(Kokkos::DynRankView<ScalarT, PHX::Device> & qp_data_returned,
   DynRankViewMeshScalarT side_normals = Kokkos::createDynRankViewWithType<DynRankViewMeshScalarT>(side_normals_buffer, side_normals_buffer.data(), numCells, numPoints, cellDims);
   DynRankViewMeshScalarT normal_lengths = Kokkos::createDynRankViewWithType<DynRankViewMeshScalarT>(normal_lengths_buffer, normal_lengths_buffer.data(), numCells, numPoints);
 
-  Kokkos::DynRankView<RealType, PHX::Device> ref_normal("ref_normal", cellDims);
-
   // for this side in the reference cell, get the components of the normal direction vector
   Intrepid2::CellTools<PHX::Device>::getPhysicalSideNormals(side_normals, jacobian_side_refcell,
     local_side_id, celltopo);
 
-  // for this side in the reference cell, get the constant normal vector to the side for area calc
-  Intrepid2::CellTools<PHX::Device>::getReferenceSideNormal(ref_normal, local_side_id, celltopo);
-  /* Note: if the side is 1D the length of the normal times 2 is the side length
-     If the side is a 2D quad, the length of the normal is the area of the side
-     If the side is a 2D triangle, the length of the normal times 1/2 is the area of the side
-   */
-
-  RealType area =
-    Intrepid2::RealSpaceTools<PHX::Device>::Serial::vectorNorm(ref_normal, Intrepid2::NORM_TWO);
-
-  // Calculate proper areas
-
-  switch(side_type[local_side_id]){
-
-    case LINE:
-
-      area *= 2;
-      break;
-
-    case TRI:
-
-      area /= 2;
-      break;
-
-    case QUAD:
-
-      break;
-
-    default:
-      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
-             "Need to supply area function for boundary type: " << side_type[local_side_id] << std::endl);
-      break;
-
-  }
 
   // scale normals (unity)
   Intrepid2::RealSpaceTools<PHX::Device>::vectorNorm(normal_lengths, side_normals, Intrepid2::NORM_TWO);
   Intrepid2::FunctionSpaceTools<PHX::Device>::scalarMultiplyDataData(side_normals, normal_lengths,
     side_normals, true);
 
-  // Pressure is a force of magnitude P along the normal to the side, divided by the side area (det)
-
   for(int cell = 0; cell < numCells; cell++)
     for(int pt = 0; pt < numPoints; pt++)
       for(int dim = 0; dim < numDOFsSet; dim++)
-//        qp_data_returned(cell, pt, dim) = const_val * side_normals(cell, pt, dim);
-        qp_data_returned(cell, pt, dim) = const_val * side_normals(cell, pt, dim) / area;
-
+        qp_data_returned(cell, pt, dim) = const_val * side_normals(cell, pt, dim);
 
 }
 
@@ -1140,14 +1102,14 @@ calc_closed_form(       Kokkos::DynRankView<ScalarT, PHX::Device>    & qp_data_r
   // How many cell's worth of data is being computed?
   int numCells  = qp_data_returned.dimension( 0);
   // How many QPs per cell?
-  int numPoints = qp_data_returned.dimension( 1); 
+  int numPoints = qp_data_returned.dimension( 1);
   // How many DOFs per node to calculate?
   int numDOFs   = qp_data_returned.dimension( 2);
 
   using DynRankViewMeshScalarT = Kokkos::DynRankView<MeshScalarT, PHX::Device>;
-  DynRankViewMeshScalarT side_normals = 
+  DynRankViewMeshScalarT side_normals =
           Kokkos::createDynRankViewWithType<DynRankViewMeshScalarT>(side_normals_buffer, side_normals_buffer.data(), numCells, numPoints, cellDims);
-  DynRankViewMeshScalarT normal_lengths = 
+  DynRankViewMeshScalarT normal_lengths =
           Kokkos::createDynRankViewWithType<DynRankViewMeshScalarT>(normal_lengths_buffer, normal_lengths_buffer.data(), numCells, numPoints);
 
   // for this side in the reference cell, get the components of the normal direction vector
@@ -1158,15 +1120,15 @@ calc_closed_form(       Kokkos::DynRankView<ScalarT, PHX::Device>    & qp_data_r
   Intrepid2::FunctionSpaceTools<PHX::Device>::scalarMultiplyDataData(side_normals, normal_lengths,
     side_normals, true);
 
-  for(int cell = 0; cell < numCells; cell++) 
+  for(int cell = 0; cell < numCells; cell++)
   {
-    for(int pt = 0; pt < numPoints; pt++) 
+    for(int pt = 0; pt < numPoints; pt++)
     {
       MeshScalarT x = physPointsSide( cell, pt, 0);
       MeshScalarT y = physPointsSide( cell, pt, 1);
       MeshScalarT z = physPointsSide( cell, pt, 2);
       double      t = workset.current_time;
-      for(int dim = 0; dim < numDOFsSet; dim++) 
+      for(int dim = 0; dim < numDOFsSet; dim++)
       {
         // Your closed form equation here!
         double value = 0.0;
@@ -1447,13 +1409,13 @@ calc_dudn_basal(Kokkos::DynRankView<ScalarT, PHX::Device> & qp_data_returned,
       }
   }
  }
- //Robin/Neumann bc for FELIX FO XZ MMS test case
- else if (beta_type == FELIX_XZ_MMS) {
+ //Robin/Neumann bc for LandIce FO XZ MMS test case
+ else if (beta_type == LANDICE_XZ_MMS) {
     //parameter values are hard-coded here...
-    MeshScalarT H = 1.0; 
-    double alpha0 = 4.0e-5; 
+    MeshScalarT H = 1.0;
+    double alpha0 = 4.0e-5;
     double beta0 = 1;
-    double rho_g = 910.0*9.8; 
+    double rho_g = 910.0*9.8;
     double s0 = 2.0;
     double A = 1e-4; //CAREFUL! A is hard-coded here, needs to match input file!!
     for(int cell = 0; cell < numCells; cell++) {
@@ -1464,17 +1426,17 @@ calc_dudn_basal(Kokkos::DynRankView<ScalarT, PHX::Device> & qp_data_returned,
           MeshScalarT s = s0 - alpha0*x*x;  //s = s0-alpha*x^2
           MeshScalarT phi1 = z - s; //phi1 = z-s
           //phi2 = 4*A*alpha^3*rho^3*g^3*x
-          MeshScalarT phi2 = 4.0*A*pow(alpha0*rho_g, 3)*x;  
+          MeshScalarT phi2 = 4.0*A*pow(alpha0*rho_g, 3)*x;
           //phi3 = 4*x^3*phi1^5*phi2^2
-          MeshScalarT phi3 = 4.0*x*x*x*pow(phi1,5)*phi2*phi2; 
+          MeshScalarT phi3 = 4.0*x*x*x*pow(phi1,5)*phi2*phi2;
           //phi4 = 8*alpha*x^3*phi1^3*phi2 - (2*H*alpha*rho*g)/beta + 3*x*phi2*(phi1^4-H^4)
           MeshScalarT phi4 = 8.0*alpha0*pow(x,3)*pow(phi1,3)*phi2 - 2.0*H*alpha0*rho_g/beta0 + 3.0*x*phi2*(pow(phi1,4) - pow(H,4));
           //phi5 = 56*alpha*x^2*phi1^3*phi2 + 48*alpha^2*x^4*phi1^2*phi2 + 6*phi2*(phi1^4-H^4
-          MeshScalarT phi5 = 56.0*alpha0*x*x*pow(phi1,3)*phi2 + 48.0*alpha0*alpha0*pow(x,4)*phi1*phi1*phi2 
-                           + 6.0*phi2*(pow(phi1,4) - pow(H,4)); 
+          MeshScalarT phi5 = 56.0*alpha0*x*x*pow(phi1,3)*phi2 + 48.0*alpha0*alpha0*pow(x,4)*phi1*phi1*phi2
+                           + 6.0*phi2*(pow(phi1,4) - pow(H,4));
           //mu = 1/2*(A*phi4^2 + A*x*phi1*phi3)^(-1/3) -- this is mu but with A factored out
-           MeshScalarT mu = 0.5*pow(A*phi4*phi4 + A*x*phi1*phi3, -1.0/3.0); 
-           // d(stress)/dn = beta0*u + 4*phi4*mutilde*beta1*nx - 4*phi2*x^2*phi1^3*mutilde*beta2*ny 
+           MeshScalarT mu = 0.5*pow(A*phi4*phi4 + A*x*phi1*phi3, -1.0/3.0);
+           // d(stress)/dn = beta0*u + 4*phi4*mutilde*beta1*nx - 4*phi2*x^2*phi1^3*mutilde*beta2*ny
            //              + (2*H*alpha*rho*g*x - beta0*x^2*phi2*(phi1^4 - H^4)*alpha;
           qp_data_returned(cell, pt, dim) = beta*dof_side(cell,pt,dim)
                                            + 4.0*phi4*mu*alpha*side_normals(cell,pt,0)
@@ -1592,7 +1554,7 @@ calc_dudn_lateral(Kokkos::DynRankView<ScalarT, PHX::Device> & qp_data_returned,
           MeshScalarT y = physPointsSide(cell,pt,1) -y_0;
           MeshScalarT h = 4.0*R2/(4.0*R2 + x*x + y*y);
           for(int dim = 0; dim < numDOFsSet; dim++)
-            qp_data_returned(cell, pt, dim) *= h; 
+            qp_data_returned(cell, pt, dim) *= h;
         }
       }
     }
@@ -1698,11 +1660,11 @@ template<typename Traits>
 void Neumann<PHAL::AlbanyTraits::Jacobian, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
-//IKT, 5/31/16: I commented out the KOKKOS_UNDER_DEVELOPMENT 
+//IKT, 5/31/16: I commented out the KOKKOS_UNDER_DEVELOPMENT
 //code b/c it does not execute correctly on an OpenMP KokkosNode.
-//This problem shows up for some FELIX cases.
-//It is somewhat of a mystery why this is the case b/c the Jacobian 
-//matrices dumped to matrix market _are_ correct.  This problem needs 
+//This problem shows up for some LandIce cases.
+//It is somewhat of a mystery why this is the case b/c the Jacobian
+//matrices dumped to matrix market _are_ correct.  This problem needs
 //to be looked into.
 //
 //#ifndef ALBANY_KOKKOS_UNDER_DEVELOPMENT
@@ -1711,7 +1673,7 @@ evaluateFields(typename Traits::EvalData workset)
 
   //Teuchos::ArrayRCP<ST> fT_nonconstView = fT->get1dViewNonConst();
   Teuchos::ArrayRCP<ST> fT_nonconstView;
-  if (fT != Teuchos::null) 
+  if (fT != Teuchos::null)
     fT_nonconstView = fT->get1dViewNonConst();
   else
     fT_nonconstView = Teuchos::null;
@@ -1750,7 +1712,7 @@ evaluateFields(typename Traits::EvalData workset)
 
             // Global column
             colT[0] =  nodeID(cell,node_col,eq_col);
-            value[0] = this->neumann(cell, node, dim).fastAccessDx(lcol);   
+            value[0] = this->neumann(cell, node, dim).fastAccessDx(lcol);
             if (workset.is_adjoint) {
               // Sum Jacobian transposed
               JacT->sumIntoLocalValues(colT[0], rowT(), value());
@@ -1768,7 +1730,7 @@ evaluateFields(typename Traits::EvalData workset)
 
   fT = workset.fT;
   //fT_nonconstView = fT->get1dViewNonConst();
-  if (this->fT != Teuchos::null) 
+  if (this->fT != Teuchos::null)
     fT_nonconstView = fT->get1dViewNonConst();
   else
     fT_nonconstView = Teuchos::null;
@@ -1860,7 +1822,7 @@ evaluateFields(typename Traits::EvalData workset)
   auto nodeID = workset.wsElNodeEqID;
   Teuchos::RCP<Tpetra_MultiVector> fpVT = workset.fpVT;
   bool trans = workset.transpose_dist_param_deriv;
-  int num_cols = workset.VpT->getNumVectors();
+  int num_cols = workset.Vp->domain()->dim();
 
   // Fill the local "neumann" array with cell contributions
 

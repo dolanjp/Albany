@@ -39,13 +39,13 @@ namespace PHAL {
 
     ScatterScalarNodalParameterBase(const Teuchos::ParameterList& p,
                                     const Teuchos::RCP<Albany::Layouts>& dl);
+    virtual ~ScatterScalarNodalParameterBase(){};
 
     void postRegistrationSetup(typename Traits::SetupData d,
                                PHX::FieldManager<Traits>& vm);
 
     // This function requires template specialization, in derived class below
     virtual void evaluateFields(typename Traits::EvalData d) = 0;
-    virtual ~ScatterScalarNodalParameterBase(){};
 
         protected:
 

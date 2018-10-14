@@ -7,6 +7,8 @@
 #if !defined(LCM_ConstitutiveModelParameters_hpp)
 #define LCM_ConstitutiveModelParameters_hpp
 
+#include "Albany_config.h"
+
 #include "Phalanx_Evaluator_Derived.hpp"
 #include "Phalanx_Evaluator_WithBaseImpl.hpp"
 #include "Phalanx_MDField.hpp"
@@ -25,11 +27,12 @@ namespace LCM {
 /// \brief Evaluates a selecltion of Constitutive Model Parameters
 /// Either as a constant or a truncated KL expansion.
 ///
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 class ConstitutiveModelParameters
     : public PHX::EvaluatorWithBaseImpl<Traits>,
       public PHX::EvaluatorDerived<EvalT, Traits>,
-      public Sacado::ParameterAccessor<EvalT, SPL_Traits> {
+      public Sacado::ParameterAccessor<EvalT, SPL_Traits>
+{
  public:
   using ScalarT     = typename EvalT::ScalarT;
   using MeshScalarT = typename EvalT::MeshScalarT;
@@ -108,8 +111,18 @@ class ConstitutiveModelParameters
   PHX::MDField<ScalarT, Cell, QuadPoint> diff_coeff_;
   ///  Thermal parameters
   PHX::MDField<ScalarT, Cell, QuadPoint> thermal_cond_;
-  PHX::MDField<ScalarT, Cell, QuadPoint> density_;
-  PHX::MDField<ScalarT, Cell, QuadPoint> heat_capacity_;
+  ///  ACE parameters
+  PHX::MDField<ScalarT, Cell, QuadPoint> ice_density_;
+  PHX::MDField<ScalarT, Cell, QuadPoint> water_density_;
+  PHX::MDField<ScalarT, Cell, QuadPoint> sediment_density_;
+  PHX::MDField<ScalarT, Cell, QuadPoint> ice_heat_capacity_;
+  PHX::MDField<ScalarT, Cell, QuadPoint> water_heat_capacity_;
+  PHX::MDField<ScalarT, Cell, QuadPoint> sediment_heat_capacity_;
+  PHX::MDField<ScalarT, Cell, QuadPoint> max_ice_saturation_;
+  PHX::MDField<ScalarT, Cell, QuadPoint> init_ice_saturation_;
+  PHX::MDField<ScalarT, Cell, QuadPoint> ice_thermal_conductivity_;
+  PHX::MDField<ScalarT, Cell, QuadPoint> water_thermal_conductivity_;
+  PHX::MDField<ScalarT, Cell, QuadPoint> sediment_thermal_conductivity_;
 
   ///
   /// map of strings to specify parameter names to MDFields
@@ -129,13 +142,13 @@ class ConstitutiveModelParameters
   ///
   /// Optional dependence on Temperature
   ///
-  bool have_temperature_;
+  bool                                         have_temperature_;
   PHX::MDField<const ScalarT, Cell, QuadPoint> temperature_;
-  std::map<std::string, std::string> temp_type_map_;
-  std::map<std::string, RealType>    dparam_dtemp_map_;
-  std::map<std::string, RealType>    ref_temp_map_;
-  std::map<std::string, RealType>    pre_exp_map_;
-  std::map<std::string, RealType>    exp_param_map_;
+  std::map<std::string, std::string>           temp_type_map_;
+  std::map<std::string, RealType>              dparam_dtemp_map_;
+  std::map<std::string, RealType>              ref_temp_map_;
+  std::map<std::string, RealType>              pre_exp_map_;
+  std::map<std::string, RealType>              exp_param_map_;
 
 #ifdef ALBANY_STOKHOS
   //! map of strings to exponential random fields
@@ -232,6 +245,6 @@ class ConstitutiveModelParameters
   void
   compute_temperature_Arrhenius(const int cell) const;
 };
-}
+}  // namespace LCM
 
 #endif

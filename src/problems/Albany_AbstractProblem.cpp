@@ -125,7 +125,7 @@ Albany::AbstractProblem::getGenericProblemParams(std::string listname) const
   Teuchos::RCP<Teuchos::ParameterList> validPL =
      Teuchos::rcp(new Teuchos::ParameterList(listname));;
   validPL->set<std::string>("Name", "", "String to designate Problem Class");
-  //The following is for FELIX problems.
+  //The following is for LandIce problems.
   validPL->set<int>("Number RBMs for ML", 0, "Number of RBMs provided to ML");
   validPL->set<int>("Number of Spatial Processors", -1, "Number of spatial processors in multi-level parallelism");
   validPL->set<int>("Phalanx Graph Visualization Detail", 0,
@@ -153,6 +153,7 @@ Albany::AbstractProblem::getGenericProblemParams(std::string listname) const
   validPL->set<bool>("Solve Adjoint", false, "");
   validPL->set<int>("Number Of Time Derivatives", 1, "Number of time derivatives in use in the problem");
 
+  validPL->set<bool>("Use MDField Memoization", false, "Use memoizer optimization to avoid recomputing MDFields (currently only works for LandIce)");
   validPL->set<bool>("Ignore Residual In Jacobian", false,
                      "Ignore residual calculations while computing the Jacobian (only generally appropriate for linear problems)");
   validPL->set<double>("Perturb Dirichlet", 0.0,
@@ -165,7 +166,7 @@ Albany::AbstractProblem::getGenericProblemParams(std::string listname) const
 
   // Candidates for deprecation. Pertain to the solution rather than the problem definition.
   validPL->set<std::string>("Solution Method", "Steady", "Flag for Steady, Transient, or Continuation");
-  validPL->set<double>("Homotopy Restart Step", 1., "Flag for Felix Homotopy Restart Step");
+  validPL->set<double>("Homotopy Restart Step", 1., "Flag for LandIce Homotopy Restart Step");
   validPL->set<std::string>("Second Order", "No", "Flag to indicate that a transient problem has two time derivs");
   validPL->set<bool>("Print Response Expansion", true, "");
 
@@ -173,12 +174,6 @@ Albany::AbstractProblem::getGenericProblemParams(std::string listname) const
   validPL->set<bool>("Compute Sensitivities", true, "Deprecated; Use parameter located under \"Piro\"/\"Analysis\"/\"Solve\" instead.");
   validPL->set<bool>("Stochastic", false, "Deprecated; Unused; Run using AlbanySG executable and specify SG parameters under \"Piro\"");
   validPL->sublist("Stochastic Galerkin", false, "Deprecated; Unused; Run using AlbanySG executable and specify SG parameters under \"Piro\"");
-
-  // Add "Schottky Barrier" for QCAD (Suzey Gao, 4/30/2015)
-  validPL->sublist("Schottky Barrier", false, "");
-
-  // Add "Interface Traps" for QCAD (Suzey Gao, 12/22/2015)
-  validPL->sublist("Interface Traps", false, "");
 
   // NOX status test that allows constutive models to cut the global time step
   // needed at the Problem scope when running Schwarz coupling

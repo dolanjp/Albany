@@ -9,7 +9,7 @@
 #ifndef ALBANY_ABSTRACTDISCRETIZATION_HPP
 #define ALBANY_ABSTRACTDISCRETIZATION_HPP
 
-#include "Albany_DiscretizationUtils.hpp"
+#include "Albany_config.h"
 
 #if defined(ALBANY_EPETRA)
 #include "Epetra_Map.h"
@@ -22,10 +22,14 @@
 #include "Albany_StateInfoStruct.hpp"
 #include "Albany_NodalDOFManager.hpp"
 #include "Albany_AbstractMeshStruct.hpp"
+#include "Albany_DiscretizationUtils.hpp"
 
-//#ifdef ALBANY_CONTACT
-//#include "Albany_ContactManager.hpp"
-//#endif
+#include "Albany_ThyraTypes.hpp"
+
+// This is only needed for the tpetraVectorSpace function, which is only used during
+// the refactor. Once the Tpetra stuff is fully removed, the get(Overlap)VectorSpace method
+// will become purely virtual, and the tpetraVectorSpace call will disappear
+#include "Thyra_TpetraVectorSpace.hpp"
 
 namespace Albany {
 
@@ -53,6 +57,11 @@ class AbstractDiscretization {
     //! Get Tpetra DOF map
     virtual Teuchos::RCP<const Tpetra_Map> getMapT(const std::string& field_name) const = 0;
 
+    //! Get DOF vector space.
+    //! Note: derived classes may want to perhaps store the vector space ptr rather than building it on the fly.
+    //!       Besides, upon completion of the refactor, we may foresee eliminating all the Tpetra_Map getters.
+    virtual Teuchos::RCP<const Thyra_VectorSpace> getVectorSpace() const { return Thyra::tpetraVectorSpace<ST>(getMapT()); }
+
 #if defined(ALBANY_EPETRA)
     //! Get Epetra overlapped DOF map
     virtual Teuchos::RCP<const Epetra_Map> getOverlapMap() const = 0;
@@ -62,6 +71,11 @@ class AbstractDiscretization {
     virtual Teuchos::RCP<const Tpetra_Map> getOverlapMapT() const = 0;
     //! Get field overlapped DOF map
     virtual Teuchos::RCP<const Tpetra_Map> getOverlapMapT(const std::string& field_name) const = 0;
+
+    //! Get DOF vector space.
+    //! Note: derived classes may want to perhaps store the vector space ptr rather than building it on the fly.
+    //!       Besides, upon completion of the refactor, we may foresee eliminating all the Tpetra_Map getters.
+    virtual Teuchos::RCP<const Thyra_VectorSpace> getOverlapVectorSpace() const { return Thyra::tpetraVectorSpace<ST>(getOverlapMapT()); }
 
 #if defined(ALBANY_EPETRA)
     //! Get Epetra Jacobian graph

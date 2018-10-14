@@ -123,7 +123,7 @@ set (CTEST_INSTALL_NAME test)
 
 if (CTEST_BUILD_CONFIGURATION MATCHES "Debug")
 # Runs tests longer if in debug mode
-   set (CTEST_TEST_TIMEOUT 1200)
+   set (CTEST_TEST_TIMEOUT 2400)
 endif ()
 
 set (PREFIX_DIR /projects/albany)
@@ -490,6 +490,10 @@ set (COMMON_CONFIGURE_OPTIONS
   "-DTrilinos_ENABLE_AztecOO:BOOL=ON"
   "-DTrilinos_ENABLE_Amesos:BOOL=ON"
   "-DTrilinos_ENABLE_Anasazi:BOOL=ON"
+  "-DAnasazi_ENABLE_RBGen:BOOL=ON"
+  "-DTrilinos_ENABLE_TpetraTSQR:BOOL=ON"
+  "-DTpetraCore_ENABLE_TSQR:BOOL=ON"
+  "-DBelos_ENABLE_TSQR:BOOL=ON"
   "-DTrilinos_ENABLE_Belos:BOOL=ON"
   "-DTrilinos_ENABLE_ML:BOOL=ON"
   "-DTrilinos_ENABLE_Phalanx:BOOL=ON"
@@ -507,7 +511,6 @@ set (COMMON_CONFIGURE_OPTIONS
   "-DTrilinos_ENABLE_Piro:BOOL=ON"
   "-DTrilinos_ENABLE_Teko:BOOL=ON"
   "-DTrilinos_ENABLE_Zoltan:BOOL=ON"
-  "-DTrilinos_ENABLE_Moertel:BOOL=ON"
   #
   "-DTrilinos_ENABLE_FEI:BOOL=OFF"
   #
@@ -546,7 +549,7 @@ set (COMMON_CONFIGURE_OPTIONS
 
 if (CTEST_BUILD_CONFIGURATION MATCHES "Debug")
    set (COMMON_CONFIGURE_OPTIONS ${COMMON_CONFIGURE_OPTIONS}
-     "-DDART_TESTING_TIMEOUT:STRING=1200"
+     "-DDART_TESTING_TIMEOUT:STRING=2400"
    )
 else ()
    set (COMMON_CONFIGURE_OPTIONS ${COMMON_CONFIGURE_OPTIONS}
@@ -596,9 +599,9 @@ if (BUILD_TRILINOS)
     "-DZlib_INCLUDE_DIRS:PATH=${PREFIX_DIR}/include"
     "-DZlib_LIBRARY_DIRS:PATH=${PREFIX_DIR}/lib"
 #
-    "-DTPL_ENABLE_yaml-cpp:BOOL=ON"
-    "-Dyaml-cpp_INCLUDE_DIRS:PATH=${PREFIX_DIR}/include"
-    "-Dyaml-cpp_LIBRARY_DIRS:PATH=${PREFIX_DIR}/lib"
+#    "-DTPL_ENABLE_yaml-cpp:BOOL=ON"
+#    "-Dyaml-cpp_INCLUDE_DIRS:PATH=${PREFIX_DIR}/include"
+#    "-Dyaml-cpp_LIBRARY_DIRS:PATH=${PREFIX_DIR}/lib"
 #
     "-DTPL_ENABLE_ParMETIS:BOOL=ON"
     "-DParMETIS_INCLUDE_DIRS:PATH=${PREFIX_DIR}/include"
@@ -641,7 +644,7 @@ if (BUILD_ALB32)
     "-DENABLE_CONTACT:BOOL=OFF"
     "-DENABLE_LCM_SPECULATIVE:BOOL=OFF"
     "-DENABLE_HYDRIDE:BOOL=ON"
-    "-DENABLE_FELIX:BOOL=ON"
+    "-DENABLE_LANDICE:BOOL=ON"
     "-DENABLE_AERAS:BOOL=ON"
     "-DENABLE_QCAD:BOOL=ON"
     "-DENABLE_MOR:BOOL=ON"
@@ -703,8 +706,8 @@ if (BUILD_TRILINOSCLANG)
     "-DMPI_BASE_DIR:PATH=${PREFIX_DIR}/clang"
     #
     "-DCMAKE_CXX_COMPILER:STRING=/projects/albany/clang/bin/mpicxx"
-#    "-DCMAKE_CXX_FLAGS:STRING='-msoft-float -march=native -O3 -DNDEBUG ${extra_cxx_flags}'"
-    "-DCMAKE_CXX_FLAGS:STRING='-march=native -O3 -DNDEBUG ${extra_cxx_flags}'"
+#    "-DCMAKE_CXX_FLAGS:STRING='-msoft-float -march=native -O3 -Wno-inconsistent-missing-override -DNDEBUG ${extra_cxx_flags}'"
+    "-DCMAKE_CXX_FLAGS:STRING='-march=native -O3 -DNDEBUG -Wno-inconsistent-missing-override ${extra_cxx_flags}'"
     "-DCMAKE_C_COMPILER:STRING=/projects/albany/clang/bin/mpicc"
     "-DCMAKE_C_FLAGS:STRING='-march=native -O3 -DNDEBUG'"
     "-DCMAKE_Fortran_COMPILER:STRING=/projects/albany/clang/bin/mpifort"
@@ -741,9 +744,9 @@ if (BUILD_TRILINOSCLANG)
     "-DZlib_INCLUDE_DIRS:PATH=${PREFIX_DIR}/clang/include"
     "-DZlib_LIBRARY_DIRS:PATH=${PREFIX_DIR}/clang/lib"
   #
-    "-DTPL_ENABLE_yaml-cpp:BOOL=ON"
-    "-Dyaml-cpp_INCLUDE_DIRS:PATH=${PREFIX_DIR}/clang/include"
-    "-Dyaml-cpp_LIBRARY_DIRS:PATH=${PREFIX_DIR}/clang/lib"
+#    "-DTPL_ENABLE_yaml-cpp:BOOL=ON"
+#    "-Dyaml-cpp_INCLUDE_DIRS:PATH=${PREFIX_DIR}/clang/include"
+#    "-Dyaml-cpp_LIBRARY_DIRS:PATH=${PREFIX_DIR}/clang/lib"
   #
     "-DTPL_ENABLE_ParMETIS:BOOL=ON"
     "-DParMETIS_INCLUDE_DIRS:PATH=${PREFIX_DIR}/clang/include"
@@ -837,9 +840,9 @@ if (BUILD_TRILINOSDBG)
     "-DZlib_INCLUDE_DIRS:PATH=${PREFIX_DIR}/include"
     "-DZlib_LIBRARY_DIRS:PATH=${PREFIX_DIR}/lib"
 #
-    "-DTPL_ENABLE_yaml-cpp:BOOL=ON"
-    "-Dyaml-cpp_INCLUDE_DIRS:PATH=${PREFIX_DIR}/include"
-    "-Dyaml-cpp_LIBRARY_DIRS:PATH=${PREFIX_DIR}/lib"
+#    "-DTPL_ENABLE_yaml-cpp:BOOL=ON"
+#    "-Dyaml-cpp_INCLUDE_DIRS:PATH=${PREFIX_DIR}/include"
+#    "-Dyaml-cpp_LIBRARY_DIRS:PATH=${PREFIX_DIR}/lib"
 #
     "-DTPL_ENABLE_ParMETIS:BOOL=ON"
     "-DParMETIS_INCLUDE_DIRS:PATH=${PREFIX_DIR}/include"
@@ -867,7 +870,7 @@ if (BUILD_ALB64DBG)
     "-DALBANY_TRILINOS_DIR:PATH=${CTEST_INSTALL_DIRECTORY}/TrilinosDbg"
     "-DENABLE_64BIT_INT:BOOL=ON"
     "-DENABLE_ALBANY_EPETRA_EXE:BOOL=OFF"
-    "-DENABLE_CONTACT:BOOL=ON"
+    "-DENABLE_CONTACT:BOOL=OFF"
     "-DENABLE_LCM:BOOL=ON"
     "-DENABLE_LCM_SPECULATIVE:BOOL=OFF"
     "-DENABLE_HYDRIDE:BOOL=ON"
@@ -892,7 +895,7 @@ if (BUILD_ALBFUNCTOR)
     "-DALBANY_TRILINOS_DIR:PATH=${CTEST_INSTALL_DIRECTORY}/TrilinosInstall"
     "-DENABLE_LCM:BOOL=ON"
     "-DENABLE_MOR:BOOL=ON"
-    "-DENABLE_FELIX:BOOL=ON"
+    "-DENABLE_LANDICE:BOOL=ON"
     "-DENABLE_HYDRIDE:BOOL=ON"
     "-DENABLE_AMP:BOOL=OFF"
     "-DENABLE_ATO:BOOL=ON"

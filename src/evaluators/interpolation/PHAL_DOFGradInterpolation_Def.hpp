@@ -23,6 +23,9 @@ DOFGradInterpolationBase(const Teuchos::ParameterList& p,
   GradBF      (p.get<std::string>   ("Gradient BF Name"), dl->node_qp_gradient),
   grad_val_qp (p.get<std::string>   ("Gradient Variable Name"), dl->qp_gradient)
 {
+  if (p.isType<bool>("Enable Memoizer") && p.get<bool>("Enable Memoizer"))
+    memoizer.enable_memoizer();
+
   this->addDependentField(val_node.fieldTag());
   this->addDependentField(GradBF.fieldTag());
   this->addEvaluatedField(grad_val_qp);
@@ -49,7 +52,7 @@ postRegistrationSetup(typename Traits::SetupData d,
 }
 
 // *********************************************************************
-// Kokkos functor Reesidual
+// Kokkos functor Residual
 #ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT
 #ifdef KOKKOS_OPTIMIZED
 template<typename EvalT, typename Traits, typename ScalarT>
@@ -108,6 +111,8 @@ template<typename EvalT, typename Traits, typename ScalarT>
 void DOFGradInterpolationBase<EvalT, Traits, ScalarT>::
 evaluateFields(typename Traits::EvalData workset)
 {
+  if (memoizer.have_stored_data(workset)) return;
+
   //Intrepid2 Version:
   // for (int i=0; i < grad_val_qp.size() ; i++) grad_val_qp[i] = 0.0;
   // Intrepid2::FunctionSpaceTools:: evaluate<ScalarT>(grad_val_qp, val_node, GradBF);
@@ -184,6 +189,7 @@ template<typename Traits>
 void FastSolutionGradInterpolationBase<PHAL::AlbanyTraits::Jacobian, Traits, typename PHAL::AlbanyTraits::Jacobian::ScalarT>::
 evaluateFields(typename Traits::EvalData workset)
 {
+
   //Intrepid2 Version:
   // for (int i=0; i < grad_val_qp.size() ; i++) grad_val_qp[i] = 0.0;
   // Intrepid2::FunctionSpaceTools:: evaluate<ScalarT>(grad_val_qp, val_node, GradBF);

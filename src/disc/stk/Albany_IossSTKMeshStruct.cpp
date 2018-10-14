@@ -4,12 +4,12 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
+#include "Albany_IossSTKMeshStruct.hpp"
 
 #ifdef ALBANY_SEACAS
 
 #include <iostream>
 
-#include "Albany_IossSTKMeshStruct.hpp"
 #include "Teuchos_VerboseObject.hpp"
 
 #include <Shards_BasicTopologies.hpp>
@@ -120,7 +120,9 @@ Albany::IossSTKMeshStruct::IossSTKMeshStruct(
     stk::mesh::Part &newNodeSet = metaData->declare_part(*it, stk::topology::NODE_RANK);
     if (!stk::io::is_part_io_part(newNodeSet)) {
       stk::mesh::Field<double> * const distrFactorfield = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "distribution_factors");
-      stk::mesh::put_field(*distrFactorfield, newNodeSet);
+      if (distrFactorfield != NULL){
+        stk::mesh::put_field(*distrFactorfield, newNodeSet);
+      }
       stk::io::put_io_part_attribute(newNodeSet);
     }
   }

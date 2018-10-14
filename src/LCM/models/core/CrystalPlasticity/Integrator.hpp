@@ -27,7 +27,8 @@ class Integrator
       StateMechanical<ScalarT, NumDimT> & state_mechanical,
       StateInternal<ScalarT, NumSlipT > & state_internal,
       minitensor::Tensor4<ScalarT, NumDimT> const & C,
-      RealType dt)
+      RealType dt,
+      CP::Verbosity const verbosity)
       : nox_status_test_(nox_status_test),
         num_slip_(state_internal.slip_n_.get_dimension()),
         num_dims_(state_mechanical.Fp_n_.get_dimension()),
@@ -38,7 +39,8 @@ class Integrator
         state_mechanical_(state_mechanical),
         state_internal_(state_internal),
         C_(C),
-        dt_(dt)
+        dt_(dt),
+        verbosity_(verbosity)
     {}
 
     virtual ~Integrator(){}
@@ -48,6 +50,9 @@ class Integrator
     void forceGlobalLoadStepReduction(
       std::string const & message) const;
 
+    void setWarningStatus(
+      std::string const & message) const;
+  
     int
     getNumIters() const { return num_iters_; }
 
@@ -94,6 +99,9 @@ class Integrator
 
     RealType
     dt_;
+
+    CP::Verbosity const 
+    verbosity_;
 };
 
 
@@ -108,7 +116,8 @@ class IntegratorFactory
     using RolMinimizer = ROL::MiniTensor_Minimizer<ValueT, CP::NlsDim<NumSlipT>::value>;
     using IntegratorBase = Integrator<EvalT, NumDimT, NumSlipT>;
 
-    IntegratorFactory(utility::StaticAllocator & allocator,
+    IntegratorFactory(
+      utility::StaticAllocator & allocator,
       const Minimizer & minimizer,
       const RolMinimizer & rol_minimizer,
       minitensor::StepType step_type,
@@ -118,7 +127,8 @@ class IntegratorFactory
       CP::StateMechanical<ScalarT, NumDimT> & state_mechanical,
       CP::StateInternal<ScalarT, NumSlipT> & state_internal,
       minitensor::Tensor4<ScalarT, NumDimT> const & C,
-      RealType dt);
+      RealType dt,
+      CP::Verbosity const verbosity);
 
     utility::StaticPointer<IntegratorBase>
     operator()(CP::IntegrationScheme integration_scheme,
@@ -158,6 +168,9 @@ class IntegratorFactory
 
     RealType
     dt_;
+
+    CP::Verbosity const
+    verbosity_;
 };
 
 template<typename EvalT, minitensor::Index NumDimT, minitensor::Index NumSlipT>
@@ -175,7 +188,8 @@ class ExplicitIntegrator : public Integrator<EvalT, NumDimT, NumSlipT>
       StateMechanical<ScalarT, NumDimT> & state_mechanical,
       StateInternal<ScalarT, NumSlipT > & state_internal,
       minitensor::Tensor4<ScalarT, NumDimT> const & C,
-      RealType dt);
+      RealType dt,
+      CP::Verbosity const verbosity);
 
     virtual void
     update() const override;
@@ -188,7 +202,8 @@ class ExplicitIntegrator : public Integrator<EvalT, NumDimT, NumSlipT>
     using Base::state_internal_;
     using Base::C_;
     using Base::dt_;
-};
+    using Base::verbosity_;
+  };
 
 template<typename EvalT, minitensor::Index NumDimT, minitensor::Index NumSlipT>
 class ImplicitIntegrator : public Integrator<EvalT, NumDimT, NumSlipT>
@@ -211,7 +226,8 @@ class ImplicitIntegrator : public Integrator<EvalT, NumDimT, NumSlipT>
       StateMechanical<ScalarT, NumDimT> & state_mechanical,
       StateInternal<ScalarT, NumSlipT > & state_internal,
       minitensor::Tensor4<ScalarT, NumDimT> const & C,
-      RealType dt);
+      RealType dt,
+      CP::Verbosity const verbosity);
 
     void
     reevaluateState() const;
@@ -224,6 +240,7 @@ class ImplicitIntegrator : public Integrator<EvalT, NumDimT, NumSlipT>
     using Base::state_internal_;
     using Base::C_;
     using Base::dt_;
+    using Base::verbosity_;
 
     bool
     using_rol_minimizer_;
@@ -260,7 +277,8 @@ class ImplicitSlipIntegrator : public ImplicitIntegrator<EvalT, NumDimT, NumSlip
       StateMechanical<ScalarT, NumDimT> & state_mechanical,
       StateInternal<ScalarT, NumSlipT > & state_internal,
       minitensor::Tensor4<ScalarT, NumDimT> const & C,
-      RealType dt);
+      RealType dt,
+      CP::Verbosity const verbosity);
 
     virtual void
     update() const override;
@@ -276,6 +294,7 @@ class ImplicitSlipIntegrator : public ImplicitIntegrator<EvalT, NumDimT, NumSlip
     using Base::minimizer_;
     using Base::rol_minimizer_;
     using Base::step_type_;
+    using Base::verbosity_;
 };
 
 
@@ -300,7 +319,8 @@ class ImplicitSlipHardnessIntegrator : public ImplicitIntegrator<EvalT, NumDimT,
       StateMechanical<ScalarT, NumDimT> & state_mechanical,
       StateInternal<ScalarT, NumSlipT > & state_internal,
       minitensor::Tensor4<ScalarT, NumDimT> const & C,
-      RealType dt);
+      RealType dt,
+      CP::Verbosity const verbosity);
 
     virtual void
     update() const override;
@@ -316,6 +336,7 @@ class ImplicitSlipHardnessIntegrator : public ImplicitIntegrator<EvalT, NumDimT,
     using Base::rol_minimizer_;
     using Base::minimizer_;
     using Base::step_type_;
+    using Base::verbosity_;
 };
 
 
@@ -340,7 +361,8 @@ class ImplicitConstrainedSlipHardnessIntegrator : public ImplicitIntegrator<Eval
       StateMechanical<ScalarT, NumDimT> & state_mechanical,
       StateInternal<ScalarT, NumSlipT > & state_internal,
       minitensor::Tensor4<ScalarT, NumDimT> const & C,
-      RealType dt);
+      RealType dt,
+      CP::Verbosity const verbosity);
 
     virtual void
     update() const override;
@@ -356,6 +378,7 @@ class ImplicitConstrainedSlipHardnessIntegrator : public ImplicitIntegrator<Eval
     using Base::minimizer_;
     using Base::rol_minimizer_;
     using Base::step_type_;
+    using Base::verbosity_;
 };
 }
 

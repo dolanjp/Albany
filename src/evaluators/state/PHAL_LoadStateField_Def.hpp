@@ -16,7 +16,10 @@ namespace PHAL {
 template<typename EvalT, typename Traits, typename ScalarType>
 LoadStateFieldBase<EvalT, Traits, ScalarType>::
 LoadStateFieldBase(const Teuchos::ParameterList& p)
-{  
+{
+  if (p.isType<bool>("Enable Memoizer") && p.get<bool>("Enable Memoizer"))
+    memoizer.enable_memoizer();
+
   fieldName =  p.get<std::string>("Field Name");
   stateName =  p.get<std::string>("State Name");
 
@@ -39,6 +42,8 @@ void LoadStateFieldBase<EvalT, Traits, ScalarType>::postRegistrationSetup(typena
 template<typename EvalT, typename Traits, typename ScalarType>
 void LoadStateFieldBase<EvalT, Traits, ScalarType>::evaluateFields(typename Traits::EvalData workset)
 {
+  if (memoizer.have_stored_data(workset)) return;
+
   //cout << "LoadStateFieldBase importing state " << stateName << " to field "
   //     << fieldName << " with size " << data.size() << endl;
 
@@ -54,7 +59,10 @@ void LoadStateFieldBase<EvalT, Traits, ScalarType>::evaluateFields(typename Trai
 template<typename EvalT, typename Traits>
 LoadStateField<EvalT, Traits>::
 LoadStateField(const Teuchos::ParameterList& p) 
-{  
+{
+  if (p.isType<bool>("Enable Memoizer") && p.get<bool>("Enable Memoizer"))
+    memoizer.enable_memoizer();
+
   fieldName =  p.get<std::string>("Field Name");
   stateName =  p.get<std::string>("State Name");
 
@@ -77,6 +85,8 @@ void LoadStateField<EvalT, Traits>::postRegistrationSetup(typename Traits::Setup
 template<typename EvalT, typename Traits>
 void LoadStateField<EvalT, Traits>::evaluateFields(typename Traits::EvalData workset)
 {
+  if (memoizer.have_stored_data(workset)) return;
+
   //cout << "LoadStateField importing state " << stateName << " to field " 
   //     << fieldName << " with size " << data.size() << endl;
 

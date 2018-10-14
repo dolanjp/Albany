@@ -18,6 +18,7 @@ Please remove when issue is resolved
 
 #include "Teuchos_ParameterList.hpp"
 #include "Teuchos_XMLParameterListHelpers.hpp"
+#include "Tpetra_RowMatrixTransposer.hpp"
 
 #include "Albany_SolverFactory.hpp"
 #include "Albany_StateInfoStruct.hpp"
@@ -223,12 +224,12 @@ ATOT::SpatialFilter::buildOperator(
 
     // scale filter operator so rows sum to one.
     Teuchos::RCP<Tpetra_Vector> rowSumsT = Teuchos::rcp(new Tpetra_Vector(filterOperatorT->getRowMap()));
-    Albany::InvRowSum(rowSumsT, filterOperatorT); 
+    Albany::InvAbsRowSum(rowSumsT, filterOperatorT); 
     filterOperatorT->leftScale(*rowSumsT);  
     
     //IKT, FIXME: remove the following creation of filterOperatorTransposeT 
     //once Mark Hoemmen fixes apply method with TRANS mode in Tpetra::CrsMatrix.
-    Tpetra_RowMatrixTransposer transposer(filterOperatorT);
+    Tpetra::RowMatrixTransposer<ST,Tpetra_LO,Tpetra_GO,KokkosNode> transposer(filterOperatorT);
     filterOperatorTransposeT = transposer.createTranspose();
 
   return;

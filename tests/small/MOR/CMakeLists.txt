@@ -1,2 +1,0 @@
-add_subdirectory(MOR_TransientHeat2D)
-add_subdirectory(MOR_MechanicalCube)

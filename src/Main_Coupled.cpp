@@ -11,6 +11,7 @@
 #include "Albany_SolverFactory.hpp"
 #include "Albany_NOXObserver.hpp"
 #include "Teuchos_GlobalMPISession.hpp"
+#include "Teuchos_StackedTimer.hpp"
 #include "Teuchos_TimeMonitor.hpp"
 #include "Teuchos_VerboseObject.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
@@ -43,14 +44,15 @@ int main(int argc, char *argv[]) {
   cmd.parse_cmdline(argc, argv, *out);
   std::string xmlfilename_coupled = cmd.xml_filename;
 
-  try {
+  const auto stackedTimer = Teuchos::rcp(
+      new Teuchos::StackedTimer("Albany Stacked Timer"));
+  Teuchos::TimeMonitor::setStackedTimer(stackedTimer);
 
-    RCP<Teuchos::Time> totalTime = 
-      Teuchos::TimeMonitor::getNewTimer("Albany: ***Total Time***");
-    RCP<Teuchos::Time> setupTime = 
-      Teuchos::TimeMonitor::getNewTimer("Albany: Setup Time");
-    Teuchos::TimeMonitor totalTimer(*totalTime); //start timer
-    Teuchos::TimeMonitor setupTimer(*setupTime); //start timer
+  try {
+    auto totalTimer = Teuchos::rcp(new Teuchos::TimeMonitor(
+        *Teuchos::TimeMonitor::getNewTimer("Albany: Total Time")));
+    auto setupTimer = Teuchos::rcp(new Teuchos::TimeMonitor(
+        *Teuchos::TimeMonitor::getNewTimer("Albany: Setup Time")));
 
     //***********************************************************
     // Set up coupled model
@@ -59,7 +61,7 @@ int main(int argc, char *argv[]) {
     RCP<Epetra_Comm> coupledComm = 
       Albany::createEpetraCommFromMpiComm(Albany_MPI_COMM_WORLD);
     RCP<const Teuchos_Comm> comm =
-      Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
+      Tpetra::getDefaultComm();
     // Connect vtune for performance profiling
     if (cmd.vtune) {
       Albany::connect_vtune(comm->getRank());
@@ -105,6 +107,7 @@ int main(int argc, char *argv[]) {
     Piro::Epetra::SolverFactory piroEpetraFactory;
     RCP<EpetraExt::ModelEvaluator> coupledSolver =
       piroEpetraFactory.createSolver(coupledPiroParams, coupledModel);
+    setupTimer = Teuchos::null;
     
     // Solve coupled system
     EpetraExt::ModelEvaluator::InArgs inArgs = coupledSolver->createInArgs();
@@ -145,7 +148,11 @@ int main(int argc, char *argv[]) {
   TEUCHOS_STANDARD_CATCH_STATEMENTS(true, std::cerr, success);
   if (!success) status+=10000;
 
-  Teuchos::TimeMonitor::summarize(*out,false,true,false/*zero timers*/);
+  stackedTimer->stop("Albany Stacked Timer");
+  Teuchos::StackedTimer::OutputOptions options;
+  options.output_fraction = true;
+  options.output_minmax = true;
+  stackedTimer->report(std::cout, Teuchos::DefaultComm<int>::getComm(), options);
   
   Kokkos::finalize_all();
 

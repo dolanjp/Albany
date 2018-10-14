@@ -95,13 +95,15 @@ evaluateFields(typename Traits::EvalData workset)
   auto overlap_map = workset.distParamLib->get(this->param_name)->overlap_map();
   auto map = workset.distParamLib->get(this->param_name)->map();
 
-  for (std::size_t cell = 0; cell < workset.numCells; ++cell)
+  for (std::size_t cell = 0; cell < workset.numCells; ++cell) {
     for (std::size_t node = 0; node < this->numNodes; ++node) {
       const LO lid_overlap = wsElDofs((int)cell,(int)node,0);
       const LO lid = map->getLocalElement(overlap_map->getGlobalElement(lid_overlap));
-      if(lid >= 0)
+      if(lid >= 0) {
        pvecT_constView[lid] = (this->val)(cell,node);
+      }
     }
+  }
 }
 
 template<typename Traits>
@@ -166,4 +168,4 @@ evaluateFields(typename Traits::EvalData workset)
 
 // **********************************************************************
 
-}
+} // namespace PHAL

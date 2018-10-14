@@ -10,6 +10,7 @@
 
 #include "AAAModel.hpp"
 #include "ACEice.hpp"
+#include "ACEpermafrost.hpp"
 #include "AnisotropicDamageModel.hpp"
 #include "AnisotropicHyperelasticDamageModel.hpp"
 #include "AnisotropicViscoplasticModel.hpp"
@@ -45,12 +46,14 @@
 namespace LCM {
 
 //------------------------------------------------------------------------------
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 ConstitutiveModelInterface<EvalT, Traits>::ConstitutiveModelInterface(
     Teuchos::ParameterList&              p,
     const Teuchos::RCP<Albany::Layouts>& dl)
-    : have_temperature_(false), have_damage_(false),
-      have_total_concentration_(false), have_total_bubble_density_(false),
+    : have_temperature_(false),
+      have_damage_(false),
+      have_total_concentration_(false),
+      have_total_bubble_density_(false),
       have_bubble_volume_fraction_(false),
       volume_average_pressure_(p.get<bool>("Volume Average Pressure", false))
 {
@@ -146,7 +149,7 @@ ConstitutiveModelInterface<EvalT, Traits>::ConstitutiveModelInterface(
 }
 
 //------------------------------------------------------------------------------
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 void
 ConstitutiveModelInterface<EvalT, Traits>::postRegistrationSetup(
     typename Traits::SetupData d,
@@ -229,7 +232,7 @@ ConstitutiveModelInterface<EvalT, Traits>::postRegistrationSetup(
 }
 
 //------------------------------------------------------------------------------
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 void
 ConstitutiveModelInterface<EvalT, Traits>::evaluateFields(
     typename Traits::EvalData workset)
@@ -241,7 +244,7 @@ ConstitutiveModelInterface<EvalT, Traits>::evaluateFields(
 }
 
 //------------------------------------------------------------------------------
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 void
 ConstitutiveModelInterface<EvalT, Traits>::fillStateVariableStruct(
     int state_var)
@@ -255,7 +258,7 @@ ConstitutiveModelInterface<EvalT, Traits>::fillStateVariableStruct(
 }
 
 //------------------------------------------------------------------------------
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 void
 ConstitutiveModelInterface<EvalT, Traits>::initializeModel(
     Teuchos::ParameterList*              p,
@@ -338,6 +341,8 @@ ConstitutiveModelInterface<EvalT, Traits>::initializeModel(
     model = rcp(new J2MiniSolver<EvalT, Traits>(p, dl));
   } else if (model_name == "ACE ice") {
     model = rcp(new ACEice<EvalT, Traits>(p, dl));
+  } else if (model_name == "ACE permafrost") {
+    model = rcp(new ACEpermafrost<EvalT, Traits>(p, dl));
   } else {
     TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, error_msg);
   }
@@ -346,4 +351,4 @@ ConstitutiveModelInterface<EvalT, Traits>::initializeModel(
 }
 
 //------------------------------------------------------------------------------
-}
+}  // namespace LCM

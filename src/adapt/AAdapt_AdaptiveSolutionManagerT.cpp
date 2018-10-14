@@ -5,7 +5,7 @@
 //*****************************************************************//
 
 #include "AAdapt_AdaptiveSolutionManagerT.hpp"
-#if defined(HAVE_STK)
+#if defined(ALBANY_STK)
 #include "AAdapt_CopyRemeshT.hpp"
 #if defined(ALBANY_LCM) && defined(ALBANY_BGL)
 #include "AAdapt_TopologyModificationT.hpp"
@@ -20,11 +20,7 @@
 #ifdef ALBANY_SCOREC
 #include "AAdapt_MeshAdapt.hpp"
 #endif
-#ifdef ALBANY_AMP
-#include "AAdapt_SimAdapt.hpp"
-#include "AAdapt_SimLayerAdapt.hpp"
-#endif
-#if (defined(ALBANY_SCOREC) || defined(ALBANY_AMP))
+#if defined(ALBANY_SCOREC)
 #include "Albany_APFDiscretization.hpp"
 #endif
 #include "AAdapt_RC_Manager.hpp"
@@ -32,6 +28,8 @@
 #include "Thyra_ModelEvaluatorDelegatorBase.hpp"
 
 #include "Albany_ModelEvaluatorT.hpp"
+
+#include "Albany_TpetraThyraUtils.hpp"
 
 AAdapt::AdaptiveSolutionManagerT::AdaptiveSolutionManagerT(
     const Teuchos::RCP<Teuchos::ParameterList>& appParams,
@@ -155,7 +153,7 @@ AAdapt::AdaptiveSolutionManagerT::AdaptiveSolutionManagerT(
 
     }
   }
-#if (defined(ALBANY_SCOREC) || defined(ALBANY_AMP))
+#if defined(ALBANY_SCOREC)
   {
     const Teuchos::RCP< Albany::APFDiscretization > apf_disc =
       Teuchos::rcp_dynamic_cast< Albany::APFDiscretization >(disc_);
@@ -174,7 +172,7 @@ buildAdapter(const Teuchos::RCP<rc::Manager>& rc_mgr)
   std::string& method = adaptParams_->get("Method", "");
   std::string first_three_chars = method.substr(0, 3);
 
-#if defined(HAVE_STK)
+#if defined(ALBANY_STK)
   if (method == "Copy Remesh") {
     adapter_ = Teuchos::rcp(new AAdapt::CopyRemeshT(adaptParams_,
         paramLib_,
@@ -207,23 +205,6 @@ buildAdapter(const Teuchos::RCP<rc::Manager>& rc_mgr)
     adapter_ = Teuchos::rcp(
       new AAdapt::MeshAdapt(adaptParams_, paramLib_, stateMgr_, rc_mgr,
                              commT_));
-  } else
-#endif
-#ifdef ALBANY_AMP
-  if (method == "Sim") {
-    bool add_layer = false;
-    if (adaptParams_->isType<bool>("Add Layer"))
-      add_layer = adaptParams_->get<bool>("Add Layer");
-    if (add_layer) { // add layer
-      *out << "************************" << std::endl;
-      *out << "    ADDING LAYER ON     " << std::endl;
-      *out << "************************" << std::endl;
-      adapter_ = Teuchos::rcp(
-          new AAdapt::SimLayerAdapt(adaptParams_, paramLib_, stateMgr_, commT_));
-    } else { // do not add layer
-      adapter_ = Teuchos::rcp(
-          new AAdapt::SimAdapt(adaptParams_, paramLib_, stateMgr_, commT_));
-    }
   } else
 #endif
 #if defined(ALBANY_LCM) && defined(ALBANY_STK_PERCEPT)
@@ -331,6 +312,7 @@ void AAdapt::AdaptiveSolutionManagerT::resizeMeshDataArrays(
   exporterT = Teuchos::rcp(new Tpetra_Export(overlapMapT, mapT));
 
   overlapped_soln = Teuchos::rcp(new Tpetra_MultiVector(overlapMapT, num_time_deriv + 1, false));
+  overlapped_soln_thyra = Albany::createThyraMultiVector(overlapped_soln);
 
   overlapped_fT = Teuchos::rcp(new Tpetra_Vector(overlapMapT));
   overlapped_jacT = Teuchos::rcp(new Tpetra_CrsMatrix(overlapJacGraphT));
@@ -409,6 +391,86 @@ AAdapt::AdaptiveSolutionManagerT::scatterXT(
 
 }
 
+void
+AAdapt::AdaptiveSolutionManagerT::scatterX(
+       const Teuchos::RCP<const Thyra_Vector> x,
+       const Teuchos::RCP<const Thyra_Vector> x_dot,
+       const Teuchos::RCP<const Thyra_Vector> x_dotdot)
+{
+  Teuchos::RCP<const Tpetra_Vector> xT = Albany::getConstTpetraVector(x);
+  overlapped_soln->getVectorNonConst(0)->doImport(*xT, *importerT, Tpetra::INSERT);
+
+  if (!x_dot.is_null()){
+    TEUCHOS_TEST_FOR_EXCEPTION(overlapped_soln->getNumVectors() < 2, std::logic_error,
+         "AdaptiveSolutionManager error: x_dotT defined but only a single solution vector is available");
+    Teuchos::RCP<const Tpetra_Vector> x_dotT = Albany::getConstTpetraVector(x_dot);
+    overlapped_soln->getVectorNonConst(1)->doImport(*x_dotT, *importerT, Tpetra::INSERT);
+  }
+
+  if (!x_dotdot.is_null()){
+    TEUCHOS_TEST_FOR_EXCEPTION(overlapped_soln->getNumVectors() < 3, std::logic_error,
+        "AdaptiveSolutionManager error: x_dotdotT defined but xDotDot isn't defined in the multivector");
+    Teuchos::RCP<const Tpetra_Vector> x_dotdotT = Albany::getConstTpetraVector(x_dotdot);
+    overlapped_soln->getVectorNonConst(2)->doImport(*x_dotdotT, *importerT, Tpetra::INSERT);
+
+	  /*OG uncomment this to enable Laplace calculations in Aeras::Hydrostatic
+	 if(overlapped_soln->getNumVectors() == 3)
+	    overlapped_soln->getVectorNonConst(2)->doImport(*x_dotdotT, *importerT, Tpetra::INSERT);
+	    */
+  }
+}
+
+void
+AAdapt::AdaptiveSolutionManagerT::
+combine (const Teuchos::RCP<const Thyra_MultiVector> src,
+         const Teuchos::RCP<Thyra_MultiVector>       dst,
+         const Albany::CombineMode                   CM)
+{
+  TEUCHOS_TEST_FOR_EXCEPTION (src.is_null() || dst.is_null(), Teuchos::Exceptions::InvalidArgument,
+                              "Error! Input ptrs to 'AAdapt::AdaptiveSolutionManagerT::combine' must be nonnull.\n");
+  auto srcT = ConverterT::getConstTpetraMultiVector(src);
+  auto dstT = ConverterT::getTpetraMultiVector(dst);
+  
+  switch (CM) {
+    case Albany::CombineMode::ADD:
+      dstT->doExport(*srcT,*get_exporterT(),Tpetra::ADD);
+      break;
+    case Albany::CombineMode::INSERT:
+      dstT->doExport(*srcT,*get_exporterT(),Tpetra::INSERT);
+      break;
+    default:
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::runtime_error,"Error! Unexpected Albany::CombineMode. "
+                                                          "This is an unexpected error. "
+                                                          "Please, contact Albany developers.\n");
+      break;
+  }
+}
+
+void
+AAdapt::AdaptiveSolutionManagerT::
+scatter (const Teuchos::RCP<const Thyra_MultiVector> src,
+         const Teuchos::RCP<Thyra_MultiVector>       dst,
+         const Albany::CombineMode                   CM)
+{
+  TEUCHOS_TEST_FOR_EXCEPTION (src.is_null() || dst.is_null(), Teuchos::Exceptions::InvalidArgument,
+                              "Error! Input ptrs to 'AAdapt::AdaptiveSolutionManagerT::scatter' must be nonnull.\n");
+  auto srcT = ConverterT::getConstTpetraMultiVector(src);
+  auto dstT = ConverterT::getTpetraMultiVector(dst);
+
+  switch (CM) {
+    case Albany::CombineMode::ADD:
+      dstT->doImport(*srcT,*get_importerT(),Tpetra::ADD);
+      break;
+    case Albany::CombineMode::INSERT:
+      dstT->doImport(*srcT,*get_importerT(),Tpetra::INSERT);
+      break;
+    default:
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::runtime_error,"Error! Unexpected Albany::CombineMode. "
+                                                          "This is an unexpected error. "
+                                                          "Please, contact Albany developers.\n");
+      break;
+  }
+}
 
 Teuchos::RCP<Thyra::MultiVectorBase<double> >
 AAdapt::AdaptiveSolutionManagerT::

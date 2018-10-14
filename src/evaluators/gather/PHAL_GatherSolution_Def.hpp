@@ -4,15 +4,15 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-//IK, 9/13/14: only Epetra is SG and MP 
-
 #include <vector>
 #include <string>
 #include <chrono>
 
 #include "Teuchos_TestForException.hpp"
 #include "Phalanx_DataLayout.hpp"
+
 #include "Albany_Utils.hpp"
+#include "Albany_TpetraThyraUtils.hpp"
 
 namespace PHAL {
 
@@ -78,7 +78,7 @@ GatherSolutionBase(const Teuchos::ParameterList& p,
     numFieldsBase = val.size();
   }
   // vector
-  else 
+  else
   if ( tensorRank == 1 ) {
     PHX::MDField<ScalarT,Cell,Node,VecDim> f(solution_names[0],dl->node_vector);
     valVec= f;
@@ -104,7 +104,7 @@ GatherSolutionBase(const Teuchos::ParameterList& p,
     numFieldsBase = dl->node_vector->dimension(2);
   }
   // tensor
-  else 
+  else
   if ( tensorRank == 2 ) {
     PHX::MDField<ScalarT,Cell,Node,VecDim,VecDim> f(solution_names[0],dl->node_tensor);
     valTensor = f;
@@ -130,7 +130,7 @@ GatherSolutionBase(const Teuchos::ParameterList& p,
     numFieldsBase = (dl->node_tensor->dimension(2))*(dl->node_tensor->dimension(3));
   }
 
-#ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT 
+#ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT
   if ( tensorRank == 0 ) {
     val_kokkos.resize(numFieldsBase);
     if (enableTransient)
@@ -166,14 +166,14 @@ postRegistrationSetup(typename Traits::SetupData d,
     }
     numNodes = val[0].dimension(1);
   }
-  else 
+  else
   if (tensorRank == 1) {
     this->utils.setFieldData(valVec,fm);
     if (enableTransient) this->utils.setFieldData(valVec_dot,fm);
     if (enableAcceleration) this->utils.setFieldData(valVec_dotdot,fm);
     numNodes = valVec.dimension(1);
   }
-  else 
+  else
   if (tensorRank == 2) {
     this->utils.setFieldData(valTensor,fm);
     if (enableTransient) this->utils.setFieldData(valTensor_dot,fm);
@@ -207,13 +207,13 @@ GatherSolution(const Teuchos::ParameterList& p) :
 
 // ********************************************************************
 // Kokkos functors for Residual
-#ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT 
+#ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT
 template<typename Traits>
 KOKKOS_INLINE_FUNCTION
 void GatherSolution<PHAL::AlbanyTraits::Residual, Traits>::
 operator() (const PHAL_GatherSolRank1_Tag&, const int& cell) const{
-  for (int node = 0; node < this->numNodes; ++node) 
-    for (int eq = 0; eq < numFields; eq++) 
+  for (int node = 0; node < this->numNodes; ++node)
+    for (int eq = 0; eq < numFields; eq++)
       (this->valVec)(cell,node,eq)= xT_constView(nodeID(cell, node,this->offset+eq));
 }
 
@@ -296,46 +296,49 @@ template<typename Traits>
 void GatherSolution<PHAL::AlbanyTraits::Residual, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
+  Teuchos::RCP<const Tpetra_Vector> xT       = Albany::getConstTpetraVector(workset.x);
+  Teuchos::RCP<const Tpetra_Vector> xdotT    = Albany::getConstTpetraVector(workset.xdot);
+  Teuchos::RCP<const Tpetra_Vector> xdotdotT = Albany::getConstTpetraVector(workset.xdotdot);
+
 #ifndef ALBANY_KOKKOS_UNDER_DEVELOPMENT
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<const Tpetra_Vector> xT = workset.xT;
-  Teuchos::RCP<const Tpetra_Vector> xdotT = workset.xdotT;
-  Teuchos::RCP<const Tpetra_Vector> xdotdotT = workset.xdotdotT;
   Teuchos::ArrayRCP<const ST> xT_constView, xdotT_constView, xdotdotT_constView;
   xT_constView = xT->get1dView();
-  if(!xdotT.is_null())
+  if(!xdotT.is_null()) {
     xdotT_constView = xdotT->get1dView();
-  if(!xdotdotT.is_null())
+  }
+  if(!xdotdotT.is_null()) {
     xdotdotT_constView = xdotdotT->get1dView();
+  }
 
   if (this->tensorRank == 1) {
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
       for (std::size_t node = 0; node < this->numNodes; ++node) {
-        for (std::size_t eq = 0; eq < numFields; eq++) 
+        for (std::size_t eq = 0; eq < numFields; eq++)
           (this->valVec)(cell,node,eq) = xT_constView[nodeID(cell,node,this->offset + eq)];
         if (workset.transientTerms && this->enableTransient) {
-          for (std::size_t eq = 0; eq < numFields; eq++) 
+          for (std::size_t eq = 0; eq < numFields; eq++)
             (this->valVec_dot)(cell,node,eq) = xdotT_constView[nodeID(cell,node,this->offset + eq)];
         }
         if (workset.accelerationTerms && this->enableAcceleration) {
-          for (std::size_t eq = 0; eq < numFields; eq++) 
+          for (std::size_t eq = 0; eq < numFields; eq++)
             (this->valVec_dotdot)(cell,node,eq) = xdotdotT_constView[nodeID(cell,node,this->offset + eq)];
         }
       }
     }
-  } else 
+  } else
   if (this->tensorRank == 2) {
     int numDim = this->valTensor.dimension(2);
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
       for (std::size_t node = 0; node < this->numNodes; ++node) {
-        for (std::size_t eq = 0; eq < numFields; eq++) 
+        for (std::size_t eq = 0; eq < numFields; eq++)
           (this->valTensor)(cell,node,eq/numDim,eq%numDim) = xT_constView[nodeID(cell,node,this->offset + eq)];
         if (workset.transientTerms && this->enableTransient) {
-          for (std::size_t eq = 0; eq < numFields; eq++) 
+          for (std::size_t eq = 0; eq < numFields; eq++)
             (this->valTensor_dot)(cell,node,eq/numDim,eq%numDim) = xdotT_constView[nodeID(cell,node,this->offset + eq)];
         }
         if (workset.accelerationTerms && this->enableAcceleration) {
-          for (std::size_t eq = 0; eq < numFields; eq++) 
+          for (std::size_t eq = 0; eq < numFields; eq++)
             (this->valTensor_dotdot)(cell,node,eq/numDim,eq%numDim) = xdotdotT_constView[nodeID(cell,node,this->offset + eq)];
         }
       }
@@ -343,14 +346,14 @@ evaluateFields(typename Traits::EvalData workset)
   } else {
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
       for (std::size_t node = 0; node < this->numNodes; ++node) {
-        for (std::size_t eq = 0; eq < numFields; eq++) 
+        for (std::size_t eq = 0; eq < numFields; eq++)
           (this->val[eq])(cell,node) = xT_constView[nodeID(cell,node,this->offset + eq)];
         if (workset.transientTerms && this->enableTransient) {
-          for (std::size_t eq = 0; eq < numFields; eq++) 
+          for (std::size_t eq = 0; eq < numFields; eq++)
             (this->val_dot[eq])(cell,node) = xdotT_constView[nodeID(cell,node,this->offset + eq)];
         }
         if (workset.accelerationTerms && this->enableAcceleration) {
-          for (std::size_t eq = 0; eq < numFields; eq++) 
+          for (std::size_t eq = 0; eq < numFields; eq++)
             (this->val_dotdot[eq])(cell,node) = xdotdotT_constView[nodeID(cell,node,this->offset + eq)];
         }
       }
@@ -365,15 +368,15 @@ evaluateFields(typename Traits::EvalData workset)
   // Get map for local data structures
   nodeID = workset.wsElNodeEqID;
 
-  // Get Tpetra vector view from a specific device 
-  auto xT_2d = workset.xT->template getLocalView<PHX::Device>();
+  // Get Tpetra vector view from a specific device
+  auto xT_2d = xT->template getLocalView<PHX::Device>();
   xT_constView = Kokkos::subview(xT_2d, Kokkos::ALL(), 0);
-  if(!workset.xdotT.is_null()) {
-    auto xdotT_2d = workset.xdotT->template getLocalView<PHX::Device>();
+  if(!xdotT.is_null()) {
+    auto xdotT_2d = xdotT->template getLocalView<PHX::Device>();
     xdotT_constView = Kokkos::subview(xdotT_2d, Kokkos::ALL(), 0);
   }
-  if(!workset.xdotdotT.is_null()) {
-    auto xdotdotT_2d = workset.xdotdotT->template getLocalView<PHX::Device>();
+  if(!xdotdotT.is_null()) {
+    auto xdotdotT_2d = xdotdotT->template getLocalView<PHX::Device>();
     xdotdotT_constView = Kokkos::subview(xdotdotT_2d, Kokkos::ALL(), 0);
   }
 
@@ -392,7 +395,7 @@ evaluateFields(typename Traits::EvalData workset)
       cudaCheckError();
     }
   }
-  
+
   else if (this->tensorRank == 1){
     Kokkos::parallel_for(PHAL_GatherSolRank1_Policy(0,workset.numCells),*this);
     cudaCheckError();
@@ -419,7 +422,7 @@ evaluateFields(typename Traits::EvalData workset)
     Kokkos::parallel_for(PHAL_GatherSolRank0_Policy(0,workset.numCells),*this);
     cudaCheckError();
 
-    if (workset.transientTerms && this->enableTransient){ 
+    if (workset.transientTerms && this->enableTransient){
       // Get MDField views from std::vector
       for (int i =0; i<numFields;i++){
         //val_dot_kokkos[i]=this->val_dot[i].get_view();
@@ -427,7 +430,7 @@ evaluateFields(typename Traits::EvalData workset)
       }
       d_val_dot=val_dot_kokkos.template view<ExecutionSpace>();
 
-      Kokkos::parallel_for(PHAL_GatherSolRank0_Transient_Policy(0,workset.numCells),*this);  
+      Kokkos::parallel_for(PHAL_GatherSolRank0_Transient_Policy(0,workset.numCells),*this);
       cudaCheckError();
     }
     if (workset.accelerationTerms && this->enableAcceleration){
@@ -460,7 +463,7 @@ evaluateFields(typename Traits::EvalData workset)
 template<typename Traits>
 GatherSolution<PHAL::AlbanyTraits::Jacobian, Traits>::
 GatherSolution(const Teuchos::ParameterList& p,
-		      const Teuchos::RCP<Albany::Layouts>& dl) :
+          const Teuchos::RCP<Albany::Layouts>& dl) :
 GatherSolutionBase<PHAL::AlbanyTraits::Jacobian, Traits>(p,dl),
 numFields(GatherSolutionBase<PHAL::AlbanyTraits::Jacobian,Traits>::numFieldsBase)
 {
@@ -476,7 +479,7 @@ numFields(GatherSolutionBase<PHAL::AlbanyTraits::Jacobian,Traits>::numFieldsBase
 
 //********************************************************************
 ////Kokkos functors for Jacobian
-#ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT 
+#ifdef ALBANY_KOKKOS_UNDER_DEVELOPMENT
 template<typename Traits>
 KOKKOS_INLINE_FUNCTION
 void GatherSolution<PHAL::AlbanyTraits::Jacobian, Traits>::
@@ -544,7 +547,7 @@ operator() (const PHAL_GatherJacRank1_Transient_Tag&, const int& cell) const{
       valref =FadType(valref.size(), xdotT_constView(nodeID(cell,node,this->offset+eq)));
       valref.fastAccessDx(firstunk + eq) =m_coeff;
     }
-  }  
+  }
 }
 
 template<typename Traits>
@@ -610,11 +613,13 @@ template<typename Traits>
 void GatherSolution<PHAL::AlbanyTraits::Jacobian, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
+  // Recall: Albany::get(Const)Tpetra(Multi)Vector returns Teuchos::null if the input is Teuchos::null
+  Teuchos::RCP<const Tpetra_Vector> xT       = Albany::getConstTpetraVector(workset.x);
+  Teuchos::RCP<const Tpetra_Vector> xdotT    = Albany::getConstTpetraVector(workset.xdot);
+  Teuchos::RCP<const Tpetra_Vector> xdotdotT = Albany::getConstTpetraVector(workset.xdotdot);
+
 #ifndef ALBANY_KOKKOS_UNDER_DEVELOPMENT
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<const Tpetra_Vector> xT = workset.xT;
-  Teuchos::RCP<const Tpetra_Vector> xdotT = workset.xdotT;
-  Teuchos::RCP<const Tpetra_Vector> xdotdotT = workset.xdotdotT;
   Teuchos::ArrayRCP<const ST> xT_constView, xdotT_constView, xdotdotT_constView;
   xT_constView = xT->get1dView();
   if(!xdotT.is_null())
@@ -677,15 +682,15 @@ evaluateFields(typename Traits::EvalData workset)
   m_coeff=workset.m_coeff;
   n_coeff=workset.n_coeff;
 
-  // Get Tpetra vector view from a specific device 
-  auto xT_2d = workset.xT->template getLocalView<PHX::Device>();
+  // Get Tpetra vector view from a specific device
+  auto xT_2d = xT->template getLocalView<PHX::Device>();
   xT_constView = Kokkos::subview(xT_2d, Kokkos::ALL(), 0);
-  if(!workset.xdotT.is_null()) {
-    auto xdotT_2d = workset.xdotT->template getLocalView<PHX::Device>();
+  if(!xdotT.is_null()) {
+    auto xdotT_2d = xdotT->template getLocalView<PHX::Device>();
     xdotT_constView = Kokkos::subview(xdotT_2d, Kokkos::ALL(), 0);
   }
-  if(!workset.xdotdotT.is_null()) {
-    auto xdotdotT_2d = workset.xdotdotT->template getLocalView<PHX::Device>();
+  if(!xdotdotT.is_null()) {
+    auto xdotdotT_2d = xdotdotT->template getLocalView<PHX::Device>();
     xdotdotT_constView = Kokkos::subview(xdotdotT_2d, Kokkos::ALL(), 0);
   }
 
@@ -704,7 +709,7 @@ evaluateFields(typename Traits::EvalData workset)
       Kokkos::parallel_for(PHAL_GatherJacRank2_Acceleration_Policy(0,workset.numCells),*this);
       cudaCheckError();
     }
-  } 
+  }
 
   else if (this->tensorRank == 1) {
     Kokkos::parallel_for(PHAL_GatherJacRank1_Policy(0,workset.numCells),*this);
@@ -796,15 +801,16 @@ void GatherSolution<PHAL::AlbanyTraits::Tangent, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<const Tpetra_Vector> xT = workset.xT;
-  Teuchos::RCP<const Tpetra_Vector> xdotT = workset.xdotT;
-  Teuchos::RCP<const Tpetra_Vector> xdotdotT = workset.xdotdotT;
-  Teuchos::RCP<const Tpetra_MultiVector> VxT = workset.VxT;
-  Teuchos::RCP<const Tpetra_MultiVector> VxdotT = workset.VxdotT;
-  Teuchos::RCP<const Tpetra_MultiVector> VxdotdotT = workset.VxdotdotT;
-  Teuchos::RCP<const Tpetra_MultiVector> VpT = workset.VpT;
+  // Recall: Albany::get(Const)Tpetra(Multi)Vector returns Teuchos::null if the input is Teuchos::null
+  Teuchos::RCP<const Tpetra_Vector> xT = Albany::getConstTpetraVector(workset.x);
+  Teuchos::RCP<const Tpetra_Vector> xdotT = Albany::getConstTpetraVector(workset.xdot);
+  Teuchos::RCP<const Tpetra_Vector> xdotdotT = Albany::getConstTpetraVector(workset.xdotdot);
 
-  //get const (read-only) view of xT and xdotT
+  Teuchos::RCP<const Tpetra_MultiVector> VxT = Albany::getConstTpetraMultiVector(workset.Vx);
+  Teuchos::RCP<const Tpetra_MultiVector> VxdotT = Albany::getConstTpetraMultiVector(workset.Vxdot);
+  Teuchos::RCP<const Tpetra_MultiVector> VxdotdotT = Albany::getConstTpetraMultiVector(workset.Vxdotdot);
+
+  //get const (read-only) view of xT
   Teuchos::ArrayRCP<const ST> xT_constView = xT->get1dView();
 
   Teuchos::RCP<ParamVec> params = workset.params;
@@ -812,7 +818,7 @@ evaluateFields(typename Traits::EvalData workset)
 
   int numDim = 0;
   if(this->tensorRank==2) numDim = this->valTensor.dimension(2); // only needed for tensor fields
-  
+
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     for (std::size_t node = 0; node < this->numNodes; ++node) {
       for (std::size_t eq = 0; eq < numFields; eq++) {
@@ -900,9 +906,9 @@ void GatherSolution<PHAL::AlbanyTraits::DistParamDeriv, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<const Tpetra_Vector> xT = workset.xT;
-  Teuchos::RCP<const Tpetra_Vector> xdotT = workset.xdotT;
-  Teuchos::RCP<const Tpetra_Vector> xdotdotT = workset.xdotdotT;
+  Teuchos::RCP<const Tpetra_Vector> xT = Albany::getConstTpetraVector(workset.x);
+  Teuchos::RCP<const Tpetra_Vector> xdotT = Albany::getConstTpetraVector(workset.xdot);
+  Teuchos::RCP<const Tpetra_Vector> xdotdotT = Albany::getConstTpetraVector(workset.xdotdot);
 
   //get const (read-only) view of xT and xdotT
   Teuchos::ArrayRCP<const ST> xT_constView = xT->get1dView();
@@ -915,7 +921,7 @@ evaluateFields(typename Traits::EvalData workset)
       }
 
     if (workset.transientTerms && this->enableTransient) {
-    Teuchos::ArrayRCP<const ST> xdotT_constView = xdotT->get1dView();
+      Teuchos::ArrayRCP<const ST> xdotT_constView = xdotT->get1dView();
       for (std::size_t node = 0; node < this->numNodes; ++node) {
           for (std::size_t eq = 0; eq < numFields; eq++)
             (this->valVec_dot)(cell,node,eq) = xdotT_constView[nodeID(cell,node,this->offset + eq)];
@@ -923,13 +929,13 @@ evaluateFields(typename Traits::EvalData workset)
     }
 
     if (workset.accelerationTerms && this->enableAcceleration) {
-    Teuchos::ArrayRCP<const ST> xdotdotT_constView = xdotdotT->get1dView();
+      Teuchos::ArrayRCP<const ST> xdotdotT_constView = xdotdotT->get1dView();
       for (std::size_t node = 0; node < this->numNodes; ++node) {
           for (std::size_t eq = 0; eq < numFields; eq++)
             (this->valVec_dotdot)(cell,node,eq) = xdotdotT_constView[nodeID(cell,node,this->offset + eq)];
         }
       }
-    } 
+    }
   } else
   if (this->tensorRank == 2) {
     int numDim = this->valTensor.dimension(2);
@@ -940,7 +946,7 @@ evaluateFields(typename Traits::EvalData workset)
       }
 
     if (workset.transientTerms && this->enableTransient) {
-    Teuchos::ArrayRCP<const ST> xdotT_constView = xdotT->get1dView();
+      Teuchos::ArrayRCP<const ST> xdotT_constView = xdotT->get1dView();
       for (std::size_t node = 0; node < this->numNodes; ++node) {
           for (std::size_t eq = 0; eq < numFields; eq++)
             (this->valTensor_dot)(cell,node,eq/numDim,eq%numDim) = xdotT_constView[nodeID(cell,node,this->offset + eq)];
@@ -948,7 +954,7 @@ evaluateFields(typename Traits::EvalData workset)
     }
 
     if (workset.accelerationTerms && this->enableAcceleration) {
-    Teuchos::ArrayRCP<const ST> xdotdotT_constView = xdotdotT->get1dView();
+      Teuchos::ArrayRCP<const ST> xdotdotT_constView = xdotdotT->get1dView();
       for (std::size_t node = 0; node < this->numNodes; ++node) {
           for (std::size_t eq = 0; eq < numFields; eq++)
             (this->valTensor_dotdot)(cell,node,eq/numDim,eq%numDim) = xdotdotT_constView[nodeID(cell,node,this->offset + eq)];
@@ -962,7 +968,7 @@ evaluateFields(typename Traits::EvalData workset)
           (this->val[eq])(cell,node) = xT_constView[nodeID(cell,node,this->offset + eq)];
       }
     if (workset.transientTerms && this->enableTransient) {
-    Teuchos::ArrayRCP<const ST> xdotT_constView = xdotT->get1dView();
+      Teuchos::ArrayRCP<const ST> xdotT_constView = xdotT->get1dView();
       for (std::size_t node = 0; node < this->numNodes; ++node) {
           for (std::size_t eq = 0; eq < numFields; eq++)
             (this->val_dot[eq])(cell,node) = xdotT_constView[nodeID(cell,node,this->offset + eq)];
@@ -970,7 +976,7 @@ evaluateFields(typename Traits::EvalData workset)
     }
 
     if (workset.accelerationTerms && this->enableAcceleration) {
-    Teuchos::ArrayRCP<const ST> xdotdotT_constView = xdotdotT->get1dView();
+      Teuchos::ArrayRCP<const ST> xdotdotT_constView = xdotdotT->get1dView();
       for (std::size_t node = 0; node < this->numNodes; ++node) {
           for (std::size_t eq = 0; eq < numFields; eq++)
             (this->val_dotdot[eq])(cell,node) = xdotdotT_constView[nodeID(cell,node,this->offset + eq)];
@@ -982,4 +988,4 @@ evaluateFields(typename Traits::EvalData workset)
 
 // **********************************************************************
 
-}
+} // namespace PHAL

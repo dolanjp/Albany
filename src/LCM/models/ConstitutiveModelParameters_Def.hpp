@@ -17,7 +17,7 @@
 namespace LCM {
 
 //------------------------------------------------------------------------------
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 ConstitutiveModelParameters<EvalT, Traits>::ConstitutiveModelParameters(
     Teuchos::ParameterList&              p,
     const Teuchos::RCP<Albany::Layouts>& dl)
@@ -152,37 +152,13 @@ ConstitutiveModelParameters<EvalT, Traits>::ConstitutiveModelParameters(
     field_map_.insert(std::make_pair(f_exp, flow_exp_));
     parseParameters(f_exp, p, paramLib);
   }
-  // ACE mass density
-  std::string density_str("ACE Density");
-  if (mat_params->isSublist(density_str)) {
-    density_ = decltype(density_)(density_str, dl_->qp_scalar);
-    field_map_.insert(std::make_pair(density_str, density_));
-    parseParameters(density_str, p, paramLib);
-  }
-  // ACE heat capacity
-  std::string cp_str("ACE Heat Capacity");
-  if (mat_params->isSublist(cp_str)) {
-    heat_capacity_ = decltype(heat_capacity_)(cp_str, dl_->qp_scalar);
-    field_map_.insert(std::make_pair(cp_str, heat_capacity_));
-    parseParameters(cp_str, p, paramLib);
-  }
-  // ACE thermal conductivity
-  std::string ace_k_str("ACE Thermal Conductivity");
-  if (mat_params->isSublist(ace_k_str)) {
-    thermal_cond_ = decltype(thermal_cond_)(ace_k_str, dl_->qp_scalar);
-    field_map_.insert(std::make_pair(ace_k_str, thermal_cond_));
-    parseParameters(ace_k_str, p, paramLib);
-  }
-
   // register evaluated fields
-  for (auto& pair : field_map_) {
-    this->addEvaluatedField(pair.second);
-  }
+  for (auto& pair : field_map_) { this->addEvaluatedField(pair.second); }
   this->setName("Constitutive Model Parameters" + PHX::typeAsString<EvalT>());
 }
 
 //------------------------------------------------------------------------------
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 void
 ConstitutiveModelParameters<EvalT, Traits>::postRegistrationSetup(
     typename Traits::SetupData d,
@@ -198,7 +174,7 @@ ConstitutiveModelParameters<EvalT, Traits>::postRegistrationSetup(
   if (have_temperature_) this->utils.setFieldData(temperature_, fm);
 }
 //------------------------------------------------------------------------------
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 void
 ConstitutiveModelParameters<EvalT, Traits>::evaluateFields(
     typename Traits::EvalData workset)
@@ -252,14 +228,12 @@ ConstitutiveModelParameters<EvalT, Traits>::evaluateFields(
   }
 }
 //------------------------------------------------------------------------------
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 typename ConstitutiveModelParameters<EvalT, Traits>::ScalarT&
 ConstitutiveModelParameters<EvalT, Traits>::getValue(const std::string& n)
 {
   for (auto& pair : constant_value_map_) {
-    if (n == pair.first) {
-      return constant_value_map_[pair.first];
-    }
+    if (n == pair.first) { return constant_value_map_[pair.first]; }
   }
   typename std::map<std::string, Teuchos::Array<ScalarT>>::iterator it2;
   for (int i(0); i < rv_map_[it2->first].size(); ++i) {
@@ -278,7 +252,7 @@ ConstitutiveModelParameters<EvalT, Traits>::getValue(const std::string& n)
 }
 
 //------------------------------------------------------------------------------
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 void
 ConstitutiveModelParameters<EvalT, Traits>::parseParameters(
     const std::string&      n,
@@ -289,6 +263,7 @@ ConstitutiveModelParameters<EvalT, Traits>::parseParameters(
       p.get<Teuchos::ParameterList*>("Material Parameters")->sublist(n);
   std::string type_name(n + " Type");
   std::string type = pl.get(type_name, "Constant");
+
   if (type == "Constant") {
     is_constant_map_.insert(std::make_pair(n, true));
     constant_value_map_.insert(std::make_pair(n, pl.get("Value", 1.0)));
@@ -335,4 +310,4 @@ ConstitutiveModelParameters<EvalT, Traits>::parseParameters(
 #endif
 }
 //------------------------------------------------------------------------------
-}
+}  // namespace LCM

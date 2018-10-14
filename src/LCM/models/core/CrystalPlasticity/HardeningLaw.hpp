@@ -74,7 +74,7 @@ struct HardeningParameterBase
 
   virtual
   void
-  setAsymptoticValue() = 0;
+  setValueAsymptotic() = 0;
 
   virtual
   void
@@ -142,9 +142,20 @@ struct LinearMinusRecoveryHardeningParameters final :
 
   virtual
   void
-  setAsymptoticValue() override
+  setValueAsymptotic() override
   {
-    this->asymptotic_value_ = this->hardening_params_(MODULUS_HARDENING) / this->hardening_params_(MODULUS_RECOVERY);
+    RealType const H = this->hardening_params_(MODULUS_HARDENING);
+    RealType const Rd = this->hardening_params_(MODULUS_RECOVERY);
+    if (H > 0.0) {
+      if (Rd > 0.0) {
+        this->asymptotic_value_ = H / Rd;
+      } else {
+        this->asymptotic_value_ = CP::HUGE_;
+      }
+    } else {
+      this->asymptotic_value_ = this->hardening_params_(STATE_HARDENING_INITIAL);
+    }
+    return;
   }
 
   virtual
@@ -205,9 +216,11 @@ struct SaturationHardeningParameters final :
 
   virtual
   void
-  setAsymptoticValue() override
+  setValueAsymptotic() override
   {
     // For this model, the asymptotic value depends on the slip rate
+    this->asymptotic_value_ = CP::HUGE_;
+
     return;
   }
 
@@ -266,9 +279,11 @@ struct DislocationDensityHardeningParameters final :
 
   virtual
   void
-  setAsymptoticValue() override
+  setValueAsymptotic() override
   {
-    // Need to get transformation of state variable \rho -> \rho_F
+    // TODO: Need to get transformation of state variable \rho -> \rho_F, For now:
+    this->asymptotic_value_ = CP::HUGE_;
+
     return;
   }
 
@@ -307,8 +322,9 @@ struct NoHardeningParameters final :
 
   virtual
   void
-  setAsymptoticValue() override
+  setValueAsymptotic() override
   {
+    this->asymptotic_value_ = CP::HUGE_;
     return;
   }
 

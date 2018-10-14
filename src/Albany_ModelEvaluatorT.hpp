@@ -88,14 +88,22 @@ class ModelEvaluatorT
 #if defined(ALBANY_LCM)
   // This is here to have a sane way to handle time and avoid Thyra ME.
   ST
-  getCurrentTime() const {
+  getCurrentTime() const
+  {
     return current_time_;
   }
 
   void
-  setCurrentTime(ST const t) {
+  setCurrentTime(ST const t)
+  {
     current_time_ = t;
     return;
+  }
+
+  void
+  setNominalValues(Thyra::ModelEvaluatorBase::InArgs<ST> nv)
+  {
+    nominalValues = nv;
   }
 #endif // ALBANY_LCM
 
@@ -145,24 +153,28 @@ class ModelEvaluatorT
 
   //@}
 
- private:
+ protected:
   //! Number of parameter vectors
   int num_param_vecs;
 
   Thyra::ModelEvaluatorBase::InArgs<ST>
   createInArgsImpl() const;
 
-  //! Cached nominal values
+  //! Cached nominal values and lower/upper bounds
   Thyra::ModelEvaluatorBase::InArgs<ST> nominalValues;
+  Thyra::ModelEvaluatorBase::InArgs<ST> lowerBounds;
+  Thyra::ModelEvaluatorBase::InArgs<ST> upperBounds;
 
   //! List of free parameter names
   Teuchos::Array<Teuchos::RCP<Teuchos::Array<std::string>>> param_names;
 
   //! Tpetra map for parameter vector
-  Teuchos::Array<Teuchos::RCP<Tpetra_Map>> tpetra_param_map;
+  Teuchos::Array<Teuchos::RCP<const Tpetra_Map>> tpetra_param_map;
 
-  //! Tpetra parameter vector
+  //! Tpetra parameter vectors and their bounds
   Teuchos::Array<Teuchos::RCP<Tpetra_Vector>> tpetra_param_vec;
+  Teuchos::Array< Teuchos::RCP< Tpetra_Vector > > param_lower_bd;
+  Teuchos::Array< Teuchos::RCP< Tpetra_Vector > > param_upper_bd;
 
   //! Tpetra response vector
   Teuchos::Array<Teuchos::RCP<Thyra::VectorBase<ST>>> thyra_response_vec;

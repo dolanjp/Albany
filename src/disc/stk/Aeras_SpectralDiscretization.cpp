@@ -8,6 +8,9 @@
 // containing a bilinear quad/hex mesh and enriching it with
 // additional nodes to create a higher order mesh.
 //
+
+#include "Aeras_SpectralDiscretization.hpp"
+
 // Standard includes
 #include <algorithm>
 #include <fstream>
@@ -46,12 +49,13 @@ extern "C"
 #include "Petra_Converters.hpp"
 #endif
 
+#include "MatrixMarket_Tpetra.hpp"
+
 // Albany includes
 #include "Albany_Utils.hpp"
 #include "Albany_NodalGraphUtils.hpp"
 #include "Albany_STKNodeFieldContainer.hpp"
 #include "Albany_BucketArray.hpp"
-#include "Aeras_SpectralDiscretization.hpp"
 
 // Constants
 const double pi = 3.1415926535897932385;
@@ -126,7 +130,7 @@ SpectralDiscretization(const Teuchos::RCP<Teuchos::ParameterList>& discParams_,
     nodes_per_element = points_per_edge*points_per_edge;
     ElemType = QUAD;
   }
-  //IKT: the following is necessary to prevent seg fault when running Aeras 
+  //IKT: the following is necessary to prevent seg fault when running Aeras
   //due to changes to Albany added by Dave Littlewood on 6/28/16.  We need
   //to recize latticeOrientation array b/c it is indexed in Albany_Application.hpp.
   stk::mesh::Selector select_owned =
@@ -475,7 +479,7 @@ setReferenceConfigurationManager(const Teuchos::RCP<AAdapt::rc::Manager>& rcm)
 // The function transformMesh() maps a unit cube domain by applying a
 // transformation
 
-// IK, 1/8/15, FIXME: I've removed all the FELIX stuff from
+// IK, 1/8/15, FIXME: I've removed all the LandIce stuff from
 // transformMesh() as this is for now an Aeras-only class.  The
 // setting of the schar mountain transformation needs to be fixed to
 // use the new (enriched) nodes rather than the nodes pulled from STK.
@@ -608,10 +612,10 @@ void Aeras::SpectralDiscretization::writeCoordsToMatrixMarket() const
       // Writing of coordinates to MatrixMarket file for Ray
       Teuchos::RCP<Tpetra_Vector> xCoords_serialT = Teuchos::rcp(new Tpetra_Vector(serial_mapT));
       xCoords_serialT->doImport(*xCoordsT, *importOperatorT, Tpetra::INSERT);
-      Tpetra_MatrixMarket_Writer::writeDenseFile("xCoords.mm", xCoords_serialT);
+      Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("xCoords.mm", xCoords_serialT);
     }
     else
-      Tpetra_MatrixMarket_Writer::writeDenseFile("xCoords.mm", xCoordsT);
+      Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("xCoords.mm", xCoordsT);
     if (coordMV->getNumVectors() > 1)
     {
       Teuchos::RCP<Tpetra_Vector> yCoordsT = coordMV->getVector(1);
@@ -619,10 +623,10 @@ void Aeras::SpectralDiscretization::writeCoordsToMatrixMarket() const
       {
         Teuchos::RCP<Tpetra_Vector> yCoords_serialT = Teuchos::rcp(new Tpetra_Vector(serial_mapT));
         yCoords_serialT->doImport(*yCoordsT, *importOperatorT, Tpetra::INSERT);
-        Tpetra_MatrixMarket_Writer::writeDenseFile("yCoords.mm", yCoords_serialT);
+        Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("yCoords.mm", yCoords_serialT);
       }
       else
-        Tpetra_MatrixMarket_Writer::writeDenseFile("yCoords.mm", yCoordsT);
+        Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("yCoords.mm", yCoordsT);
     }
     if (coordMV->getNumVectors() > 2)
     {
@@ -631,10 +635,10 @@ void Aeras::SpectralDiscretization::writeCoordsToMatrixMarket() const
       {
         Teuchos::RCP<Tpetra_Vector> zCoords_serialT = Teuchos::rcp(new Tpetra_Vector(serial_mapT));
         zCoords_serialT->doImport(*zCoordsT, *importOperatorT, Tpetra::INSERT);
-        Tpetra_MatrixMarket_Writer::writeDenseFile("zCoords.mm", zCoords_serialT);
+        Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("zCoords.mm", zCoords_serialT);
       }
       else
-        Tpetra_MatrixMarket_Writer::writeDenseFile("zCoords.mm", zCoordsT);
+        Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("zCoords.mm", zCoordsT);
     }
   }
 #endif
@@ -710,7 +714,7 @@ Aeras::SpectralDiscretization::writeSolution(
 
 void
 Aeras::SpectralDiscretization::writeSolution(
-    const Epetra_Vector& soln, const Epetra_Vector &soln_dot, 
+    const Epetra_Vector& soln, const Epetra_Vector &soln_dot,
     const double time, const bool overlapped)
 {
 #if 1
@@ -738,7 +742,7 @@ Aeras::SpectralDiscretization::writeSolutionT(const Tpetra_Vector& solnT,
 
 void
 Aeras::SpectralDiscretization::writeSolutionT(const Tpetra_Vector& solnT,
-                                              const Tpetra_Vector& soln_dotT, 
+                                              const Tpetra_Vector& soln_dotT,
                                               const double time,
                                               const bool overlapped)
 {
@@ -746,14 +750,14 @@ Aeras::SpectralDiscretization::writeSolutionT(const Tpetra_Vector& solnT,
   *out << "DEBUG: " << __PRETTY_FUNCTION__ << std::endl;
 #endif
   writeSolutionToMeshDatabaseT(solnT, soln_dotT, time, overlapped);
-  //IKT, FIXME? extend writeSolutionToFileT to take in soln_dotT? 
+  //IKT, FIXME? extend writeSolutionToFileT to take in soln_dotT?
   writeSolutionToFileT(solnT, time, overlapped);
 }
 
 void
 Aeras::SpectralDiscretization::writeSolutionT(const Tpetra_Vector& solnT,
-                                              const Tpetra_Vector& soln_dotT, 
-                                              const Tpetra_Vector& soln_dotdotT, 
+                                              const Tpetra_Vector& soln_dotT,
+                                              const Tpetra_Vector& soln_dotdotT,
                                               const double time,
                                               const bool overlapped)
 {
@@ -761,7 +765,7 @@ Aeras::SpectralDiscretization::writeSolutionT(const Tpetra_Vector& solnT,
   *out << "DEBUG: " << __PRETTY_FUNCTION__ << std::endl;
 #endif
   writeSolutionToMeshDatabaseT(solnT, soln_dotT, soln_dotdotT, time, overlapped);
-  //IKT, FIXME? extend writeSolutionToFileT to take in soln_dotT and soln_dotdotT? 
+  //IKT, FIXME? extend writeSolutionToFileT to take in soln_dotT and soln_dotdotT?
   writeSolutionToFileT(solnT, time, overlapped);
 }
 
@@ -785,7 +789,7 @@ Aeras::SpectralDiscretization::writeSolutionToMeshDatabaseT(
 {
 #ifdef WRITE_TO_MATRIX_MARKET_TO_MM_FILE
   *out << "DEBUG: " << __PRETTY_FUNCTION__ << std::endl;
-  Tpetra_MatrixMarket_Writer::writeDenseFile("solnT.mm", solnT);
+  Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("solnT.mm", solnT);
 #endif
   // Put solution as Tpetra_Vector into STK Mesh
   if (!overlapped)
@@ -798,7 +802,7 @@ Aeras::SpectralDiscretization::writeSolutionToMeshDatabaseT(
 void
 Aeras::SpectralDiscretization::writeSolutionToMeshDatabaseT(
     const Tpetra_Vector& solnT,
-    const Tpetra_Vector& soln_dotT, 
+    const Tpetra_Vector& soln_dotT,
     const double time,
     const bool overlapped)
 {
@@ -816,8 +820,8 @@ Aeras::SpectralDiscretization::writeSolutionToMeshDatabaseT(
 void
 Aeras::SpectralDiscretization::writeSolutionToMeshDatabaseT(
     const Tpetra_Vector& solnT,
-    const Tpetra_Vector& soln_dotT, 
-    const Tpetra_Vector& soln_dotdotT, 
+    const Tpetra_Vector& soln_dotT,
+    const Tpetra_Vector& soln_dotdotT,
     const double time,
     const bool overlapped)
 {
@@ -840,7 +844,7 @@ Aeras::SpectralDiscretization::writeSolutionMVToMeshDatabase(
 {
 #ifdef OUTPUT_TO_SCREEN
   *out << "DEBUG: " << __PRETTY_FUNCTION__ << std::endl;
-   Tpetra_MatrixMarket_Writer::writeDenseFile("solnT.mm", solnT);
+   Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("solnT.mm", solnT);
 #endif
   // Put solution as Epetra_Vector into STK Mesh
   if (!overlapped)
@@ -1004,7 +1008,7 @@ Aeras::SpectralDiscretization::getSolutionField(bool overlapped) const
   int numElements = mapT->getNodeNumElements();
   Teuchos::Array<int> i_indices(numElements);
   for(std::size_t k = 0; k < numElements; k++)
-	i_indices[k] = Teuchos::as<int>(indicesAV[k]);
+  i_indices[k] = Teuchos::as<int>(indicesAV[k]);
   Teuchos::RCP<Epetra_Map> map = Teuchos::rcp(new Epetra_Map(-1, numElements, i_indices.getRawPtr(), 0, *comm));
   Teuchos::RCP<Epetra_Vector> soln = Teuchos::rcp(new Epetra_Vector(*map));
   this->getSolutionField(*soln, overlapped);
@@ -1044,7 +1048,7 @@ Aeras::SpectralDiscretization::getSolutionField(Epetra_Vector &result,
   // iterating over each bucket.
   stk::mesh::Selector locally_owned = metaData.locally_owned_part();
 
-  Teuchos::RCP<Epetra_Map> node_map =
+  Teuchos::RCP<const Epetra_Map> node_map =
     Petra::TpetraMap_To_EpetraMap(node_mapT, comm);
   container->fillSolnVector(result, locally_owned, node_map);
 }
@@ -1140,9 +1144,9 @@ Aeras::SpectralDiscretization::setSolutionFieldT(const Tpetra_Vector& solnT, con
 }
 
 void
-Aeras::SpectralDiscretization::setSolutionFieldT(const Tpetra_Vector& solnT, 
-                                                 const Tpetra_Vector& soln_dotT, 
-                                                 const Tpetra_Vector& soln_dotdotT) 
+Aeras::SpectralDiscretization::setSolutionFieldT(const Tpetra_Vector& solnT,
+                                                 const Tpetra_Vector& soln_dotT,
+                                                 const Tpetra_Vector& soln_dotdotT)
 {
 #ifdef OUTPUT_TO_SCREEN
   *out << "DEBUG: " << __PRETTY_FUNCTION__ << std::endl;
@@ -1232,7 +1236,7 @@ Aeras::SpectralDiscretization::setOvlpSolutionFieldT(const Tpetra_Vector& solnT,
 }
 
 void
-Aeras::SpectralDiscretization::setOvlpSolutionFieldT(const Tpetra_Vector& solnT, 
+Aeras::SpectralDiscretization::setOvlpSolutionFieldT(const Tpetra_Vector& solnT,
                                                      const Tpetra_Vector& soln_dotT,
                                                      const Tpetra_Vector& soln_dotdotT)
 {
@@ -1326,8 +1330,9 @@ stk::mesh::EntityId
 Aeras::SpectralDiscretization::getMaximumID(const stk::mesh::EntityRank rank) const
 {
   // Get the local maximum ID
+  bulkData.begin_entities(rank);
   stk::mesh::EntityId last_entity =
-    (--bulkData.end_entities(rank))->first.id();
+     (--bulkData.end_entities(rank))->first.id();
 
   // Use a parallel MAX reduction to obtain the global maximum ID
   stk::mesh::EntityId result;
@@ -1579,8 +1584,8 @@ void Aeras::SpectralDiscretization::computeOwnedNodesAndUnknownsLines()
   //////////////////////////////////////////////////////////////////////
   // Debugging code
   stk::mesh::get_selected_entities(select_owned,
-				   bulkData.buckets(stk::topology::ELEMENT_RANK),
-				   cells);
+           bulkData.buckets(stk::topology::ELEMENT_RANK),
+           cells);
   for (int rank = 0; rank < commT->getSize(); ++rank)
   {
     if (rank == commT->getRank())
@@ -1603,8 +1608,8 @@ void Aeras::SpectralDiscretization::computeOwnedNodesAndUnknownsLines()
   // linear STK mesh, plus all of the enriched interior nodes.  Start
   // with the end nodes.
   stk::mesh::get_selected_entities(select_owned,
-				   bulkData.buckets(stk::topology::NODE_RANK),
-				   ownednodes);
+           bulkData.buckets(stk::topology::NODE_RANK),
+           ownednodes);
   numOwnedNodes = ownednodes.size();
 #ifdef OUTPUT_TO_SCREEN
   for (int rank = 0; rank < commT->getSize(); ++rank)
@@ -1696,8 +1701,8 @@ void Aeras::SpectralDiscretization::computeOwnedNodesAndUnknownsQuads()
   //////////////////////////////////////////////////////////////////////
   // Debugging code
   stk::mesh::get_selected_entities(select_owned,
-				   bulkData.buckets(stk::topology::ELEMENT_RANK),
-				   cells);
+           bulkData.buckets(stk::topology::ELEMENT_RANK),
+           cells);
   for (int rank = 0; rank < commT->getSize(); ++rank)
   {
     if (rank == commT->getRank())
@@ -1721,8 +1726,8 @@ void Aeras::SpectralDiscretization::computeOwnedNodesAndUnknownsQuads()
   // linear STK mesh, the non-endpoint nodes from the owned edges, plus
   // all of the enriched interior nodes.  Start with the corner nodes.
   stk::mesh::get_selected_entities(select_owned,
-				   bulkData.buckets(stk::topology::NODE_RANK),
-				   ownednodes);
+           bulkData.buckets(stk::topology::NODE_RANK),
+           ownednodes);
   numOwnedNodes = ownednodes.size();
 #ifdef OUTPUT_TO_SCREEN
   for (int rank = 0; rank < commT->getSize(); ++rank)
@@ -1847,8 +1852,8 @@ void Aeras::SpectralDiscretization::computeOverlapNodesAndUnknownsLines()
   // Count the number of unowned nodes from the original linear STK mesh
   std::vector< stk::mesh::Entity > unownedNodes;
   stk::mesh::get_selected_entities(select_unowned,
-				   bulkData.buckets(stk::topology::NODE_RANK),
-				   unownedNodes);
+           bulkData.buckets(stk::topology::NODE_RANK),
+           unownedNodes);
   numOverlapNodes += unownedNodes.size();
 #ifdef OUTPUT_TO_SCREEN
   for (int rank = 0; rank < commT->getSize(); ++rank)
@@ -1931,8 +1936,8 @@ void Aeras::SpectralDiscretization::computeOverlapNodesAndUnknownsQuads()
   // Count the number of unowned nodes from the original linear STK mesh
   std::vector< stk::mesh::Entity > unownedNodes;
   stk::mesh::get_selected_entities(select_unowned,
-				   bulkData.buckets(stk::topology::NODE_RANK),
-				   unownedNodes);
+           bulkData.buckets(stk::topology::NODE_RANK),
+           unownedNodes);
   numOverlapNodes += unownedNodes.size();
 #ifdef OUTPUT_TO_SCREEN
   for (int rank = 0; rank < commT->getSize(); ++rank)
@@ -2147,7 +2152,6 @@ void Aeras::SpectralDiscretization::computeCoordsQuads()
   int deg = np - 1;
 
   // Compute the 1D Gauss-Lobatto quadrature
-std::cout << "AGS -- see if this works??" << std::endl;
   Intrepid2::CubaturePolylib<PHX::Device, RealType, RealType>
     gl1D(2*deg-1, Intrepid2::POLYTYPE_GAUSS_LOBATTO);
 
@@ -2157,7 +2161,6 @@ std::cout << "AGS -- see if this works??" << std::endl;
 //  axes.push_back(gl1D);
 //  axes.push_back(gl1D);
   //Intrepid2::CubatureTensor<PHX::Device> gl2D(axes);
-std::cout << "AGS -- need to uncomment to run -- just trying to compile" << std::endl;
   Intrepid2::CubatureTensor<PHX::Device> gl2D(gl1D, gl1D);
   Field_t refCoords("AAA", np2, 2);
   Field_t refWeights("AAA", np2);
@@ -2574,7 +2577,7 @@ void Aeras::SpectralDiscretization::computeWorksetInfo()
         TEUCHOS_TEST_FOR_EXCEPTION(
           node_lid < 0,
           std::logic_error,
-	  "STK1D_Disc: node_lid out of range " << node_lid << std::endl);
+    "STK1D_Disc: node_lid out of range " << node_lid << std::endl);
         //coords[b][i][j] = stk::mesh::field_data(*coordinates_field, rowNode);
 
         //wsElNodeID[b][i][j] = node_gid;
@@ -2771,8 +2774,8 @@ void Aeras::SpectralDiscretization::computeSideSetsLines()
 
     std::vector< stk::mesh::Entity > sides ;
     stk::mesh::get_selected_entities( select_owned_in_sspart , // sides local to this processor
-				      bulkData.buckets( metaData.side_rank() ) ,
-				      sides ); // store the result in "sides"
+              bulkData.buckets( metaData.side_rank() ) ,
+              sides ); // store the result in "sides"
 
     *out << "STKDisc: sideset "<< ss->first <<" has size " << sides.size() << "  on Proc 0." << std::endl;
 
@@ -2964,8 +2967,8 @@ void Aeras::SpectralDiscretization::computeNodeSetsLines()
 
     std::vector< stk::mesh::Entity > nodes ;
     stk::mesh::get_selected_entities( select_owned_in_nspart ,
-				      bulkData.buckets( stk::topology::NODE_RANK ) ,
-				      nodes );
+              bulkData.buckets( stk::topology::NODE_RANK ) ,
+              nodes );
 
     nodeSets[ns->first].resize(nodes.size());
     nodeSetCoords[ns->first].resize(nodes.size());
@@ -3616,8 +3619,8 @@ Aeras::SpectralDiscretization::updateMesh()
 
 #ifdef WRITE_TO_MATRIX_MARKET_TO_MM_FILE
   //write owned maps to matrix market file for debug
-  Tpetra_MatrixMarket_Writer::writeMapFile("mapT.mm", *mapT);
-  Tpetra_MatrixMarket_Writer::writeMapFile("node_mapT.mm", *node_mapT);
+  Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeMapFile("mapT.mm", *mapT);
+  Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeMapFile("node_mapT.mm", *node_mapT);
 #endif
 
   // IK, 1/23/15: I've commented out the guts of this function.  It is
@@ -3632,8 +3635,8 @@ Aeras::SpectralDiscretization::updateMesh()
 
 #ifdef WRITE_TO_MATRIX_MARKET_TO_MM_FILE
   //write overlap maps to matrix market file for debug
-  Tpetra_MatrixMarket_Writer::writeMapFile("overlap_mapT.mm", *overlap_mapT);
-  Tpetra_MatrixMarket_Writer::writeMapFile("overlap_node_mapT.mm", *overlap_node_mapT);
+  Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeMapFile("overlap_mapT.mm", *overlap_mapT);
+  Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeMapFile("overlap_node_mapT.mm", *overlap_node_mapT);
 #endif
 
     // Note that getCoordinates has not been converted to use the
@@ -3668,11 +3671,11 @@ Aeras::SpectralDiscretization::updateMesh()
 
 #ifdef WRITE_TO_MATRIX_MARKET_TO_MM_FILE
   Teuchos::RCP<Tpetra_CrsMatrix> ImplicitMatrix = Teuchos::rcp(new Tpetra_CrsMatrix(implicit_graphT));
-  Tpetra_MatrixMarket_Writer::writeSparseFile("ImplicitMatrix.mm", ImplicitMatrix);
+  Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeSparseFile("ImplicitMatrix.mm", ImplicitMatrix);
   Teuchos::RCP<Tpetra_CrsMatrix> Matrix = Teuchos::rcp(new Tpetra_CrsMatrix(graphT));
-  Tpetra_MatrixMarket_Writer::writeSparseFile("Matrix.mm", Matrix);
+  Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeSparseFile("Matrix.mm", Matrix);
   Teuchos::RCP<Tpetra_CrsMatrix> OverlapMatrix = Teuchos::rcp(new Tpetra_CrsMatrix(overlap_graphT));
-  Tpetra_MatrixMarket_Writer::writeSparseFile("OverlapMatrix.mm", OverlapMatrix);
+  Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeSparseFile("OverlapMatrix.mm", OverlapMatrix);
 #endif
 
   // IK, 1/23/15, FIXME: to implement -- transform mesh based on new

@@ -18,6 +18,7 @@ Please remove when issue is resolved
 
 #include "Teuchos_ParameterList.hpp"
 #include "Teuchos_XMLParameterListHelpers.hpp"
+#include "Tpetra_RowMatrixTransposer.hpp"
 
 #include "Albany_SolverFactory.hpp"
 #include "Albany_StateInfoStruct.hpp"
@@ -750,7 +751,7 @@ ATO::Solver::copyTopologyIntoParameter( const double* p, SolverSubSolver& subSol
     int distParamIndex = subSolver.params_in->Np()-1;
     Teuchos::RCP<Epetra_Comm> comm = 
       Albany::createEpetraCommFromTeuchosComm(localNodeMapT->getComm());
-    Teuchos::RCP<Epetra_Map> localNodeMap = Petra::TpetraMap_To_EpetraMap(localNodeMapT, comm); 
+    Teuchos::RCP<const Epetra_Map> localNodeMap = Petra::TpetraMap_To_EpetraMap(localNodeMapT, comm);
     Teuchos::RCP<Epetra_Vector> topoVec = Teuchos::rcp(new Epetra_Vector(*localNodeMap));
     Petra::TpetraVector_To_EpetraVector(topoVecT, *topoVec, comm); 
     subSolver.params_in->set_p(distParamIndex,topoVec);
@@ -1905,7 +1906,7 @@ ATO::SpatialFilter::buildOperator(
     int numnonzeros = 0;
     Teuchos::RCP<Epetra_Comm> comm = 
       Albany::createEpetraCommFromTeuchosComm(localNodeMapT->getComm());
-    Teuchos::RCP<Epetra_Map> localNodeMap = Petra::TpetraMap_To_EpetraMap(localNodeMapT, comm); 
+    Teuchos::RCP<const Epetra_Map> localNodeMap = Petra::TpetraMap_To_EpetraMap(localNodeMapT, comm);
     filterOperatorT = Teuchos::rcp(new Tpetra_CrsMatrix(localNodeMapT,numnonzeros));
     for (std::map<GlobalPoint,std::set<GlobalPoint> >::iterator 
         it=neighbors.begin(); it!=neighbors.end(); ++it) { 
@@ -1940,12 +1941,12 @@ ATO::SpatialFilter::buildOperator(
 
     // scale filter operator so rows sum to one.
     Teuchos::RCP<Tpetra_Vector> rowSumsT = Teuchos::rcp(new Tpetra_Vector(filterOperatorT->getRowMap()));
-    Albany::InvRowSum(rowSumsT, filterOperatorT); 
+    Albany::InvAbsRowSum(rowSumsT, filterOperatorT); 
     filterOperatorT->leftScale(*rowSumsT); 
 
     //IKT, FIXME: remove the following creation of filterOperatorTransposeT 
     //once Mark Hoemmen fixes apply method with TRANS mode in Tpetra::CrsMatrix.
-    Tpetra_RowMatrixTransposer transposer(filterOperatorT);
+    Tpetra::RowMatrixTransposer<ST,Tpetra_LO,Tpetra_GO,KokkosNode> transposer(filterOperatorT);
     filterOperatorTransposeT = transposer.createTranspose();
 
   return;

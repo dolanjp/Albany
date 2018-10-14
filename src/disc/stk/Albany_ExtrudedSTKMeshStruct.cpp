@@ -264,21 +264,21 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(
   {
     indices[i] = bulkData2D.identifier(nodes2D[i]) - 1;
   }
-  Teuchos::RCP<const Tpetra_Map> nodes_map = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode>(indices(),comm,KokkosClassic::Details::getNode<KokkosNode>());
+  Teuchos::RCP<const Tpetra_Map> nodes_map = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode>(indices(),comm);
 
   indices.resize(cells2D.size());
   for (int i=0; i<cells2D.size(); ++i)
   {
     indices[i] = bulkData2D.identifier(cells2D[i]) -1;
   }
-  Teuchos::RCP<const Tpetra_Map> cells_map = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode>(indices(),comm,KokkosClassic::Details::getNode<KokkosNode>());
+  Teuchos::RCP<const Tpetra_Map> cells_map = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode>(indices(),comm);
 
   indices.resize(sides2D.size());
   for (int i=0; i<sides2D.size(); ++i)
   {
     indices[i] = bulkData2D.identifier(sides2D[i]) -1;
   }
-  Teuchos::RCP<const Tpetra_Map> sides_map = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode>(indices(),comm,KokkosClassic::Details::getNode<KokkosNode>());
+  Teuchos::RCP<const Tpetra_Map> sides_map = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode>(indices(),comm);
 
   GO maxGlobalElements2dId = cells_map->getMaxAllGlobalIndex() + 1;
   GO maxGlobalVertices2dId = nodes_map->getMaxAllGlobalIndex() + 1;
@@ -597,6 +597,9 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(
   // Extrude fields
   extrudeBasalFields (nodes2D,cells2D,maxGlobalElements2dId,maxGlobalVertices2dId);
   interpolateBasalLayeredFields (nodes2D,cells2D,levelsNormalizedThickness,maxGlobalElements2dId,maxGlobalVertices2dId);
+
+  // Loading required input fields from file
+  this->loadRequiredInputFields (req,comm);
 
   //Albany::fix_node_sharing(*bulkData);
   bulkData->modification_end();

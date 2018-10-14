@@ -15,6 +15,7 @@
 #include "Stokhos_EpetraVectorOrthogPoly.hpp"
 #include "Teuchos_VerboseObject.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
+#include "Teuchos_StackedTimer.hpp"
 
 #include "Petra_Converters.hpp"
 
@@ -60,6 +61,10 @@ int main(int argc, char *argv[]) {
     do_initial_guess = false;
   }
 
+  const auto stackedTimer = Teuchos::rcp(
+      new Teuchos::StackedTimer("Albany Stacked Timer"));
+  Teuchos::TimeMonitor::setStackedTimer(stackedTimer);
+
   try {
 
     Teuchos::RCP<Teuchos::Time> totalTime =
@@ -70,7 +75,7 @@ int main(int argc, char *argv[]) {
     Teuchos::RCP<Epetra_Comm> globalComm =
       Albany::createEpetraCommFromMpiComm(Albany_MPI_COMM_WORLD);
     Teuchos::RCP<const Teuchos_Comm> tcomm =
-      Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
+      Tpetra::getDefaultComm();
 
     // Connect vtune for performance profiling
     if (cmd.vtune) {
@@ -255,13 +260,16 @@ int main(int argc, char *argv[]) {
     *out << "\nNumber of Failed Comparisons: " << status << std::endl;
 
     totalTimer.~TimeMonitor();
-    Teuchos::TimeMonitor::summarize(std::cout,false,true,false);
-    Teuchos::TimeMonitor::zeroOutTimers();
-
   }
   TEUCHOS_STANDARD_CATCH_STATEMENTS(true, std::cerr, success);
   if (!success) status+=10000;
   
+  stackedTimer->stop("Albany Stacked Timer");
+  Teuchos::StackedTimer::OutputOptions options;
+  options.output_fraction = true;
+  options.output_minmax = true;
+  stackedTimer->report(std::cout, Teuchos::DefaultComm<int>::getComm(), options);
+
   Kokkos::finalize_all();
 
   return status;

@@ -6,11 +6,8 @@
 
 #include "Albany_PUMIOutput.hpp"
 #include "Albany_PUMIVtk.hpp"
-#if defined(HAVE_STK)
+#if defined(ALBANY_STK)
 #include "Albany_PUMIExodus.hpp"
-#endif
-#if defined(ALBANY_AMP)
-#include "Albany_SimOutput.hpp"
 #endif
 
 Albany::PUMIOutput::~PUMIOutput() {
@@ -21,13 +18,9 @@ Albany::PUMIOutput* Albany::PUMIOutput::create(
   const Teuchos::RCP<const Teuchos_Comm>& comm) {
   if (meshStruct->outputFileName.empty())
     return 0;
-#if defined(HAVE_STK)
+#if defined(ALBANY_STK)
   if (meshStruct->outputFileName.find("exo") != std::string::npos)
     return new PUMIExodus(meshStruct, comm);
-#endif
-#if defined(ALBANY_AMP)
-  if (meshStruct->outputFileName.find("sms") != std::string::npos)
-    return new SimOutput(meshStruct, comm);
 #endif
   if (meshStruct->outputFileName.find("vtk") != std::string::npos)
     return new PUMIVtk(meshStruct, comm);

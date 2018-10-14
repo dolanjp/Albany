@@ -167,11 +167,6 @@ if (BUILD_TRILINOS)
     "-DCMAKE_BUILD_TYPE:STRING=RELEASE"
     #
     "-DCMAKE_CXX_COMPILER:FILEPATH=${NVCC_WRAPPER}"
-    "-DCMAKE_CXX_FLAGS:STRING=-fopenmp -mcpu=power8 -lgfortran -arch=sm_60"
-    "-DCMAKE_C_FLAGS:STRING=-fopenmp -mcpu=power8 -lgfortran" 
-    "-DCMAKE_Fortran_FLAGS:STRING=-lgfortran -fopenmp -mcpu=power8"
-    "-DCMAKE_EXE_LINKER_FLAGS=-fopenmp -mcpu=power8 -ldl -lgfortran"
-    "-DTrilinos_EXTRA_LINK_FLAGS:STRING=-fopenmp -mcpu=power8 -ldl -lgfortran"
     "-DCMAKE_SKIP_RULE_DEPENDENCY=ON"
     "-DTPL_ENABLE_MPI:BOOL=ON"
     #
@@ -184,7 +179,7 @@ if (BUILD_TRILINOS)
     "-DBLAS_LIBRARY_NAMES:STRING=blas"
     #
     "-DTPL_ENABLE_LAPACK:BOOL=ON"
-    "-DLAPACK_LIBRARY_DIRS:PATH=$ENV{LAPACKROOT}/lib"
+    "-DLAPACK_LIBRARY_DIRS:PATH=$ENV{BLAS_ROOT}/lib"
     "-DLAPACK_LIBRARY_NAMES:STRING=lapack"
     #
     "-DTPL_ENABLE_Boost:BOOL=ON"
@@ -198,21 +193,19 @@ if (BUILD_TRILINOS)
     "-DTrilinos_ENABLE_ALL_OPTIONAL_PACKAGES:BOOL=OFF"
     "-DTrilinos_ENABLE_ALL_PACKAGES:BOOL=OFF"
     "-DTrilinos_ENABLE_CXX11:BOOL=ON"
-    "-DTrilinos_CXX11_FLAGS:STRING='-std=c++11 --expt-extended-lambda'"
     "-DTrilinos_ENABLE_EXAMPLES:BOOL=OFF"
     "-DTrilinos_ENABLE_EXPLICIT_INSTANTIATION:BOOL=ON"
     "-DTrilinos_VERBOSE_CONFIGURE:BOOL=OFF"
     "-DTrilinos_WARNINGS_AS_ERRORS_FLAGS:STRING="
     #
     "-DHAVE_INTREPID_KOKKOSCORE:BOOL=ON"
-    "-DKokkos_ENABLE_CXX11:BOOL=ON"
-    "-DKokkos_ENABLE_Cuda_LAMBDA:BOOL=ON"
     "-DKokkos_ENABLE_Cuda_UVM:BOOL=ON"
     "-DKokkos_ENABLE_EXAMPLES:BOOL=OFF"
     "-DKokkos_ENABLE_OpenMP:BOOL=OFF"
     "-DKokkos_ENABLE_Pthread:BOOL=OFF"
     "-DKokkos_ENABLE_Serial:BOOL=ON"
     "-DKokkos_ENABLE_TESTS:BOOL=ON"
+    "-DKOKKOS_ARCH:STRING=Power8;Pascal60"
     "-DTPL_ENABLE_Thrust:BOOL=ON"
     "-DTPL_ENABLE_CUDA:BOOL=ON"
     "-DTPL_ENABLE_CUSPARSE:BOOL=ON"
@@ -227,7 +220,7 @@ if (BUILD_TRILINOS)
     "-DTeuchos_ENABLE_COMPLEX:BOOL=ON"
     "-DTpetra_ENABLE_Kokkos_Refactor:BOOL=ON"
     "-DKokkos_ENABLE_Cuda_Lambda:BOOL=ON"
-    "-DTpetra_ASSUME_CUDA_AWARE_MPI:BOOL=ON"
+    "-DTpetra_ASSUME_CUDA_AWARE_MPI:BOOL=OFF"
     "-DTpetra_INST_INT_LONG_LONG:BOOL=ON"
     "-DTpetra_INST_INT_INT:BOOL=OFF"
     #
@@ -274,13 +267,12 @@ if (BUILD_TRILINOS)
     "-DTrilinos_ENABLE_Rythmos:BOOL=ON"
     "-DTrilinos_ENABLE_SEACAS:BOOL=ON"
     "-DTrilinos_ENABLE_SEACASAprepro_lib:BOOL=ON"
-    "-DTrilinos_ENABLE_STKClassic:BOOL=OFF"
     "-DTrilinos_ENABLE_STKDoc_tests:BOOL=OFF"
     "-DTrilinos_ENABLE_STKIO:BOOL=ON"
     "-DTrilinos_ENABLE_STKMesh:BOOL=ON"
     "-DTrilinos_ENABLE_Sacado:BOOL=ON"
     "-DTrilinos_ENABLE_Shards:BOOL=ON"
-    "-DTrilinos_ENABLE_Stokhos:BOOL=ON"
+    "-DTrilinos_ENABLE_Stokhos:BOOL=OFF"
     "-DTrilinos_ENABLE_Stratimikos:BOOL=ON"
     "-DTrilinos_ENABLE_TESTS:BOOL=OFF"
     "-DTrilinos_ENABLE_Teko:BOOL=ON"
@@ -290,10 +282,7 @@ if (BUILD_TRILINOS)
     "-DTrilinos_ENABLE_Tpetra:BOOL=ON"
     "-DTrilinos_ENABLE_Zoltan2:BOOL=ON"
     "-DTrilinos_ENABLE_Zoltan:BOOL=ON"
-    "-DIntrepid2_ENABLE_KokkosDynRankView:BOOL=ON"
-    "-DTrilinos_ENABLE_Tempus:BOOL=OFF"
-    "-DTempus_ENABLE_TESTS:BOOL=OFF"
-    "-DTempus_ENABLE_EXAMPLES:BOOL=OFF"
+    "-DTrilinos_ENABLE_Tempus:BOOL=ON"
     "-DTempus_ENABLE_EXPLICIT_INSTANTIATION:BOOL=ON"
   )
 
@@ -373,19 +362,16 @@ if (BUILD_ALBANY)
     "-DALBANY_TRILINOS_DIR:FILEPATH=${CTEST_BINARY_DIRECTORY}/TrilinosInstall"
     "-DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF"
     "-DENABLE_DEMO_PDES:BOOL=ON"
-    "-DENABLE_FELIX:BOOL=ON"
+    "-DENABLE_LANDICE:BOOL=ON"
     "-DENABLE_ALBANY_EPETRA_EXE:BOOL=OFF"
-    "-DENABLE_QCAD:BOOL=ON"
     "-DENABLE_LCM:BOOL=OFF"
     "-DENABLE_AERAS:BOOL=ON"
-    "-DENABLE_SG:BOOL=OFF"
-    "-DENABLE_ENSEMBLE:BOOL=OFF"
     "-DENABLE_ATO:BOOL=OFF"
-    "-DENABLE_MOR:BOOL=OFF"
     "-DENABLE_PERFORMANCE_TESTS:BOOL=OFF"
     "-DALBANY_LIBRARIES_ONLY=OFF"
-    "-DENABLE_INSTALL:BOOL=OFF"
     "-DENABLE_KOKKOS_UNDER_DEVELOPMENT:BOOL=ON"
+    "-DENABLE_TAN_FAD_TYPE:STRING=SLFad"
+    "-DALBANY_TAN_SLFAD_SIZE=100"
     )
   
   if (NOT EXISTS "${CTEST_BINARY_DIRECTORY}/AlbBuild")
@@ -394,7 +380,7 @@ if (BUILD_ALBANY)
 
   CTEST_CONFIGURE(
     BUILD "${CTEST_BINARY_DIRECTORY}/AlbBuild"
-    SOURCE "/home/projects/albany/repos/Albany"
+    SOURCE "/home/projects/albany/ride/repos/Albany"
     OPTIONS "${CONFIGURE_OPTIONS}"
     RETURN_VALUE HAD_ERROR
     )

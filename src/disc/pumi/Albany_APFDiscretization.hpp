@@ -8,6 +8,8 @@
 #ifndef ALBANY_APFDISCRETIZATION_HPP
 #define ALBANY_APFDISCRETIZATION_HPP
 
+#include "Albany_AbstractDiscretization.hpp"
+
 #include <vector>
 #include <functional>
 
@@ -17,7 +19,6 @@
 #include "Epetra_Comm.h"
 #endif
 
-#include "Albany_AbstractDiscretization.hpp"
 #include "Albany_APFMeshStruct.hpp"
 #include "Albany_PUMIOutput.hpp"
 
@@ -165,14 +166,14 @@ class APFDiscretization : public Albany::AbstractDiscretization {
     void writeAnySolutionToFile(const double time);
     void writeSolutionT(const Tpetra_Vector& soln, const double time, const bool overlapped = false) override;
     void writeSolutionT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot, const double time, const bool overlapped = false) override;
-    void writeSolutionT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot, 
+    void writeSolutionT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot,
                         const Tpetra_Vector& soln_dotdot, const double time, const bool overlapped = false) override;
     void writeSolutionMV(const Tpetra_MultiVector& soln, const double time, const bool overlapped = false) override;
     void writeSolutionToMeshDatabaseT(const Tpetra_Vector& soln, const double time, const bool overlapped = false) override;
-    void writeSolutionToMeshDatabaseT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot, 
+    void writeSolutionToMeshDatabaseT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot,
                                       const double time, const bool overlapped = false) override;
-    void writeSolutionToMeshDatabaseT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot, 
-                                      const Tpetra_Vector& soln_dotdot, 
+    void writeSolutionToMeshDatabaseT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot,
+                                      const Tpetra_Vector& soln_dotdot,
                                       const double time, const bool overlapped = false) override;
     void writeSolutionMVToMeshDatabase(const Tpetra_MultiVector& soln, const double time, const bool overlapped = false) override;
     void writeSolutionToFileT(const Tpetra_Vector& soln, const double time, const bool overlapped = false) override;
@@ -217,7 +218,7 @@ class APFDiscretization : public Albany::AbstractDiscretization {
     // Second, the parameter library is used to set Time on each workset.
     void updateMesh(bool shouldTransferIPData, Teuchos::RCP<ParamLib> paramLib);
 
-    // Function that transforms a mesh of a unit cube (for FELIX problems)
+    // Function that transforms a mesh of a unit cube (for LandIce problems)
     // not supported in PUMI now
     void transformMesh(){}
 
@@ -334,8 +335,8 @@ class APFDiscretization : public Albany::AbstractDiscretization {
 
     void initTemperatureHack();
 
-    //! Set any FELIX Data
-    virtual void setFELIXData() {}
+    //! Set any LandIce Data
+    virtual void setLandIceData() {}
 
     //! Some evaluators may want access to the underlying apf mesh elements.
     std::vector<std::vector<apf::MeshEntity*> >& getBuckets() {return buckets;}
@@ -396,7 +397,7 @@ class APFDiscretization : public Albany::AbstractDiscretization {
 
     double previous_time_label;
 
-    // Transformation types for FELIX problems
+    // Transformation types for LandIce problems
     enum TRANSFORMTYPE {NONE, ISMIP_HOM_TEST_A};
     TRANSFORMTYPE transform_type;
 

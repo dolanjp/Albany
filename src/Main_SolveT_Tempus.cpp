@@ -16,12 +16,14 @@
 #include "Teuchos_ParameterList.hpp"
 
 #include "Teuchos_GlobalMPISession.hpp"
+#include "Teuchos_StackedTimer.hpp"
 #include "Teuchos_TimeMonitor.hpp"
 #include "Teuchos_VerboseObject.hpp"
 #include "Teuchos_StandardCatchMacros.hpp"
 #include "Teuchos_FancyOStream.hpp"
 #include "Thyra_DefaultProductVector.hpp"
 #include "Thyra_DefaultProductVectorSpace.hpp"
+#include "MatrixMarket_Tpetra.hpp"
 
 #include "Tempus_IntegratorBasic.hpp" 
 #include "Piro_ObserverToTempusIntegrationObserverAdapter.hpp"
@@ -257,17 +259,18 @@ int main(int argc, char *argv[]) {
   cmd.parse_cmdline(argc, argv, *out);
   bool computeSensitivities = true; 
 
-  try {
-    RCP<Teuchos::Time> totalTime =
-      Teuchos::TimeMonitor::getNewTimer("Albany: ***Total Time***");
+  const auto stackedTimer = Teuchos::rcp(
+      new Teuchos::StackedTimer("Albany Stacked Timer"));
+  Teuchos::TimeMonitor::setStackedTimer(stackedTimer);
 
-    RCP<Teuchos::Time> setupTime =
-      Teuchos::TimeMonitor::getNewTimer("Albany: Setup Time");
-    Teuchos::TimeMonitor totalTimer(*totalTime); //start timer
-    Teuchos::TimeMonitor setupTimer(*setupTime); //start timer
+  try {
+    auto totalTimer = Teuchos::rcp(new Teuchos::TimeMonitor(
+        *Teuchos::TimeMonitor::getNewTimer("Albany: Total Time")));
+    auto setupTimer = Teuchos::rcp(new Teuchos::TimeMonitor(
+        *Teuchos::TimeMonitor::getNewTimer("Albany: Setup Time")));
 
     RCP<const Teuchos_Comm> comm =
-      Tpetra::DefaultPlatform::getDefaultPlatform().getComm();
+      Tpetra::getDefaultComm();
 
     // Connect vtune for performance profiling
     if (cmd.vtune) {
@@ -279,7 +282,7 @@ int main(int argc, char *argv[]) {
     const RCP<Thyra::ResponseOnlyModelEvaluatorBase<ST> > solver =
       slvrfctry.createAndGetAlbanyAppT(app, comm, comm);
     
-    setupTimer.~TimeMonitor();
+    setupTimer = Teuchos::null;
 
     Teuchos::ParameterList &appPL = slvrfctry.getParameters();
     // Create debug output object
@@ -332,12 +335,12 @@ int main(int argc, char *argv[]) {
         Teuchos::RCP<Tpetra_Vector> x_tpetra_serial = Teuchos::rcp(new Tpetra_Vector(serial_map)); 
         x_tpetra_serial->doImport(*x_tpetra, *importOperator, Tpetra::INSERT);
         //writing to MatrixMarket file
-         Tpetra_MatrixMarket_Writer::writeDenseFile("xfinal_tempus.mm", x_tpetra_serial);
+         Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("xfinal_tempus.mm", x_tpetra_serial);
       }
       if (writeToMatrixMarketDistrSolnMap == true) {
         //writing to MatrixMarket file
-        Tpetra_MatrixMarket_Writer::writeDenseFile("xfinal_tempus_distributed.mm", *x_tpetra);
-        Tpetra_MatrixMarket_Writer::writeMapFile("xfinal_tempus_distributed_map.mm", *x_tpetra->getMap());
+        Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeDenseFile("xfinal_tempus_distributed.mm", *x_tpetra);
+        Tpetra::MatrixMarket::Writer<Tpetra_CrsMatrix>::writeMapFile("xfinal_tempus_distributed_map.mm", *x_tpetra->getMap());
       }
       *out << "\n Finish Transient Tempus No Piro time integration!\n";
       //End of code to use Tempus to perform time-integration without going through Piro
@@ -352,7 +355,11 @@ int main(int argc, char *argv[]) {
   TEUCHOS_STANDARD_CATCH_STATEMENTS(true, std::cerr, success);
   if (!success) status+=10000;
 
-  Teuchos::TimeMonitor::summarize(*out,false,true,false/*zero timers*/);
+  stackedTimer->stop("Albany Stacked Timer");
+  Teuchos::StackedTimer::OutputOptions options;
+  options.output_fraction = true;
+  options.output_minmax = true;
+  stackedTimer->report(std::cout, Teuchos::DefaultComm<int>::getComm(), options);
 
 #ifdef ALBANY_APF
   Albany::APFMeshStruct::finalize_libraries();

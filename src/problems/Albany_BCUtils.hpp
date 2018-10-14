@@ -95,10 +95,16 @@ struct DirichletTraits {
   constructSDBCName(const std::string& ns, const std::string& dof);
 
   static std::string
+  constructScaledSDBCName(const std::string& ns, const std::string& dof);
+
+  static std::string
   constructBCNameField(const std::string& ns, const std::string& dof);
 
   static std::string
   constructSDBCNameField(const std::string& ns, const std::string& dof);
+
+  static std::string
+  constructScaledSDBCNameField(const std::string& ns, const std::string& dof);
 
   static std::string
   constructTimeDepBCName(const std::string& ns, const std::string& dof);
@@ -182,6 +188,11 @@ class BCUtils {
   getOffsets() const {
     return offsets_;
   }
+  
+  std::vector<std::string> 
+  getNodeSetIDs() const {
+    return nodeSetIDs_;
+  }
 
   bool useSDBCs() const { return use_sdbcs_; }
 
@@ -259,6 +270,7 @@ class BCUtils {
 
  protected:
    Teuchos::Array<Teuchos::Array<int>> offsets_;
+   std::vector<std::string> nodeSetIDs_;
    bool use_sdbcs_{false};
 };
 

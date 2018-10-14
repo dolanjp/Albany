@@ -27,14 +27,14 @@ struct SlipSystem
   slip_family_index_;
 
   //! Slip system vectors.
-  minitensor::Vector<RealType, NumDimT>
+  minitensor::Vector<RealType, MAX_DIM>
   s_;
 
-  minitensor::Vector<RealType, NumDimT>
+  minitensor::Vector<RealType, MAX_DIM>
   n_;
 
   //! Schmid Tensor.
-  minitensor::Tensor<RealType, NumDimT>
+  minitensor::Tensor<RealType, MAX_DIM>
   projector_;
 
   //
@@ -146,13 +146,13 @@ StateInternal(int cell, int pt, int num_slip, InputVectorType const & hardening_
       num_slip_(num_slip),
       hardening_n_(hardening_n),
       slip_n_(slip_n),
-      rate_slip_(num_slip),
+      rates_slip_(num_slip),
       hardening_np1_(num_slip),
       slip_np1_(num_slip),
       shear_np1_(num_slip),
       resistance_(num_slip)
   {
-    rate_slip_.fill(minitensor::Filler::ZEROS);
+    rates_slip_.fill(minitensor::Filler::ZEROS);
     hardening_np1_.fill(minitensor::Filler::ZEROS);
     slip_np1_.fill(minitensor::Filler::ZEROS);
     shear_np1_.fill(minitensor::Filler::ZEROS);
@@ -175,7 +175,7 @@ StateInternal(int cell, int pt, int num_slip, InputVectorType const & hardening_
   slip_n_;
 
   VectorType
-  rate_slip_;
+  rates_slip_;
 
   VectorType
   hardening_np1_;

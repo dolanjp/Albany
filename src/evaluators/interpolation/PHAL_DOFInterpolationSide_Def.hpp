@@ -23,6 +23,9 @@ DOFInterpolationSideBase (const Teuchos::ParameterList& p,
   TEUCHOS_TEST_FOR_EXCEPTION (!dl_side->isSideLayouts, Teuchos::Exceptions::InvalidParameter,
                               "Error! The layouts structure does not appear to be that of a side set.\n");
 
+  if (p.isType<bool>("Enable Memoizer") && p.get<bool>("Enable Memoizer"))
+    memoizer.enable_memoizer();
+
   this->addDependentField(val_node.fieldTag());
   this->addDependentField(BF.fieldTag());
   this->addEvaluatedField(val_qp);
@@ -49,6 +52,7 @@ template<typename EvalT, typename Traits, typename ScalarT>
 void DOFInterpolationSideBase<EvalT, Traits, ScalarT>::
 evaluateFields(typename Traits::EvalData workset)
 {
+  if (memoizer.have_stored_data(workset)) return;
   if (workset.sideSets->find(sideSetName)==workset.sideSets->end())
     return;
 

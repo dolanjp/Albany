@@ -20,16 +20,10 @@
 #include "PHAL_ResponseSquaredL2Difference.hpp"
 #include "PHAL_ResponseSquaredL2DifferenceSide.hpp"
 #include "PHAL_SaveNodalField.hpp"
-#ifdef ALBANY_FELIX
-  #include "FELIX_ResponseSurfaceVelocityMismatch.hpp"
-  #include "FELIX_ResponseSMBMismatch.hpp"
-  #include "FELIX_ResponseBoundarySquaredL2Norm.hpp"
-#endif
-#ifdef ALBANY_QCAD
-#if defined(ALBANY_EPETRA)
-  #include "QCAD_ResponseSaddleValue.hpp"
-  #include "QCAD_ResponseRegionBoundary.hpp"
-#endif
+#ifdef ALBANY_LANDICE
+#include "LandIce_ResponseSurfaceVelocityMismatch.hpp"
+#include "LandIce_ResponseSMBMismatch.hpp"
+#include "LandIce_ResponseBoundarySquaredL2Norm.hpp"
 #endif
 #if defined(ALBANY_LCM)
 #include "IPtoNodalField.hpp"
@@ -47,9 +41,6 @@
 #ifdef ALBANY_AERAS
 #include "Aeras_ShallowWaterResponseL2Error.hpp"
 #include "Aeras_ShallowWaterResponseL2Norm.hpp"
-#endif
-#ifdef ALBANY_AMP
-#include "Energy.hpp"
 #endif
 
 template<typename EvalT, typename Traits>
@@ -163,18 +154,18 @@ Albany::ResponseUtilities<EvalT,Traits>::constructResponses(
   {
     res_ev = rcp(new PHAL::ResponseSquaredL2DifferenceSMST_TPST<EvalT,Traits>(*p,dl));
   }
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
   else if (responseName == "Surface Velocity Mismatch")
   {
-    res_ev = rcp(new FELIX::ResponseSurfaceVelocityMismatch<EvalT,Traits>(*p,dl));
+    res_ev = rcp(new LandIce::ResponseSurfaceVelocityMismatch<EvalT,Traits>(*p,dl));
   }
   else if (responseName == "Surface Mass Balance Mismatch")
   {
-    res_ev = rcp(new FELIX::ResponseSMBMismatch<EvalT,Traits>(*p,dl));
+    res_ev = rcp(new LandIce::ResponseSMBMismatch<EvalT,Traits>(*p,dl));
   }
   else if (responseName == "Boundary Squared L2 Norm")
   {
-    res_ev = rcp(new FELIX::ResponseBoundarySquaredL2Norm<EvalT,Traits>(*p,dl));
+    res_ev = rcp(new LandIce::ResponseBoundarySquaredL2Norm<EvalT,Traits>(*p,dl));
   }
 #endif
   else if (responseName == "Center Of Mass")
@@ -187,34 +178,6 @@ Albany::ResponseUtilities<EvalT,Traits>::constructResponses(
 
     res_ev = rcp(new QCAD::ResponseSaveField<EvalT,Traits>(*p, dl));
   }
-#ifdef ALBANY_QCAD
-  else if (responseName == "Saddle Value")
-  {
-#if defined(ALBANY_EPETRA)
-    p->set< RCP<DataLayout> >("Dummy Data Layout", dl->dummy);
-    p->set<std::string>("Coordinate Vector Name", "Coord Vec");
-    p->set<std::string>("Weights Name",   "Weights");
-
-    res_ev = rcp(new QCAD::ResponseSaddleValue<EvalT,Traits>(*p, dl));
-#else
-  TEUCHOS_TEST_FOR_EXCEPTION(true, Teuchos::Exceptions::InvalidParameter,
-                                  std::endl << "Error in Albany::ResponseUtilities:  " <<
-                                  "Saddle Value Response not available if ALBANY_EPETRA_EXE is OFF " << std::endl);
-#endif
-  }
-
-  else if (responseName == "Region Boundary")
-  {
-#if defined(ALBANY_EPETRA)
-    res_ev = rcp(new QCAD::ResponseRegionBoundary<EvalT,Traits>(*p, dl));
-#else
-  TEUCHOS_TEST_FOR_EXCEPTION(true, Teuchos::Exceptions::InvalidParameter,
-                                  std::endl << "Error in Albany::ResponseUtilities:  " <<
-                                  "Region Boundary Response not available if ALBANY_EPETRA_EXE is OFF " << std::endl);
-#endif
-  }
-#endif
-
   else if (responseName == "PHAL Field Integral")
   {
 #if defined(ALBANY_EPETRA)
@@ -233,12 +196,6 @@ Albany::ResponseUtilities<EvalT,Traits>::constructResponses(
   {
     res_ev = rcp(new PHAL::ResponseThermalEnergyT<EvalT,Traits>(*p, dl));
   }
-#ifdef ALBANY_AMP
-  else if (responseName == "AMP Energy")
-  {
-    res_ev = rcp(new AMP::Energy<EvalT,Traits>(*p, dl));
-  }
-#endif
 
 #ifdef ALBANY_AERAS
   else if (responseName == "Aeras Shallow Water L2 Error")

@@ -7,9 +7,17 @@
 #ifndef PHAL_UTILITIES
 #define PHAL_UTILITIES
 
-#include "PHAL_AlbanyTraits.hpp"
+#include "Albany_CommTypes.hpp"
 
-namespace Albany { class Application; }
+#include "Teuchos_RCP.hpp"
+#include "Phalanx_MDField.hpp"
+#include "Phalanx_DataLayout_MDALayout.hpp"
+
+// Forward declarations
+namespace Albany {
+  class Application;
+  class MeshSpecsStruct;
+}
 
 namespace PHAL {
 
@@ -201,6 +209,40 @@ struct ExtendLayout
 
     dims.push_back(new_dim);
     return createMDALayout<Tags...,NewTag>(dims);
+  }
+};
+
+/* In the case of a single workset, an MDField may not need to be recomputed.
+ * Currently, this memoizer (which is not really a true memoizer) checks to 
+ * see whether the workset index has changed in order to determine whether an 
+ * MDField has to be recomputed.
+ *
+ * WARNING: Use with caution. This class should not be used if an MDField
+ * changes within the lifetime of the object.
+ */
+template<typename Traits>
+class MDFieldMemoizer {
+  bool _enableMemoizer;
+  int _prevWorksetIndex;
+
+public:
+  MDFieldMemoizer() :
+    _enableMemoizer(false),
+    _prevWorksetIndex(-1) {
+  }
+
+  void enable_memoizer() {
+    _enableMemoizer = true;
+  }
+
+  bool have_stored_data (const typename Traits::EvalData workset) {
+    if (!_enableMemoizer) return false;
+
+    // Check workset index
+    const bool stored = (workset.wsIndex == _prevWorksetIndex);
+    _prevWorksetIndex = workset.wsIndex;
+
+    return stored;
   }
 };
 

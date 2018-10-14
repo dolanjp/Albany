@@ -9,6 +9,7 @@
 
 // Always enable HeatProblem and SideLaplacianProblem
 #include "Albany_HeatProblem.hpp"
+#include "Albany_PopulateMesh.hpp"
 #include "Albany_SideLaplacianProblem.hpp"
 
 #ifdef ALBANY_DEMO_PDES
@@ -21,11 +22,6 @@
 #include "Albany_ComprNSProblem.hpp"
 #include "Albany_ODEProblem.hpp"
 #include "Albany_PNPProblem.hpp"
-#endif
-
-#ifdef ALBANY_QCAD
-#include "QCAD_PoissonProblem.hpp"
-#include "QCAD_SchrodingerProblem.hpp"
 #include "Albany_ThermoElectrostaticsProblem.hpp"
 #endif
 
@@ -52,27 +48,6 @@
 #endif
 #endif
 
-#ifdef ALBANY_HYDRIDE
-#include "Hydride/problems/HydrideProblem.hpp"
-#include "Hydride/problems/HydMorphProblem.hpp"
-#include "Hydride/problems/MesoScaleLinkProblem.hpp"
-#include "Hydride/problems/LaplaceBeltramiProblem.hpp"
-#endif
-
-#ifdef ALBANY_AFRL
-#include "AFRL/problems/MultiScaleHeatProblem.hpp"
-#include "AFRL/problems/RotationMechanicsProblem.hpp"
-#endif
-
-#ifdef ALBANY_AMP
-#include "AMP/problems/PhaseProblem.hpp"
-#include "AMP/problems/AMPThermoMechanics.hpp"
-#endif
-
-#ifdef ALBANY_ANISO
-#include "ANISO/AdvectionProblem.hpp"
-#endif
-
 #ifdef ALBANY_AERAS
 #include "Aeras/problems/Aeras_ShallowWaterProblem.hpp"
 #include "Aeras/problems/Aeras_ShallowWaterProblemNoAD.hpp"
@@ -82,8 +57,13 @@
 #include "Aeras/problems/Aeras_HydrostaticProblem.hpp"
 #endif
 
-#ifdef ALBANY_FELIX
-#include "FELIX/problems/FELIX_ProblemFactory.hpp"
+#ifdef ALBANY_LANDICE
+#include "LandIce/problems/LandIce_ProblemFactory.hpp"
+#endif
+
+#ifdef ALBANY_TSUNAMI
+#include "Tsunami/problems/Tsunami_NavierStokes.hpp"
+#include "Tsunami/problems/Tsunami_Boussinesq.hpp"
 #endif
 
 Albany::ProblemFactory::ProblemFactory(
@@ -126,6 +106,9 @@ Albany::ProblemFactory::create()
   }
   else if (method == "Heat 3D") {
     strategy = rcp(new Albany::HeatProblem(problemParams, paramLib, 3, commT));
+  }
+  else if (method == "Populate Mesh") {
+    strategy = rcp(new Albany::PopulateMesh(problemParams, discretizationParams, paramLib));
   }
   else if (method == "Side Laplacian 3D") {
     strategy = rcp(new Albany::SideLaplacian(problemParams, paramLib, 1));
@@ -181,26 +164,6 @@ Albany::ProblemFactory::create()
   }
   else if (method == "PNP 3D") {
     strategy = rcp(new Albany::PNPProblem(problemParams, paramLib, 3));
-  }
-#endif
-#ifdef ALBANY_QCAD
-  else if (method == "Poisson 1D") {
-    strategy = rcp(new QCAD::PoissonProblem(problemParams, paramLib, 1, commT));
-  }
-  else if (method == "Poisson 2D") {
-    strategy = rcp(new QCAD::PoissonProblem(problemParams, paramLib, 2, commT));
-  }
-  else if (method == "Poisson 3D") {
-    strategy = rcp(new QCAD::PoissonProblem(problemParams, paramLib, 3, commT));
-  }
-  else if (method == "Schrodinger 1D") {
-    strategy = rcp(new QCAD::SchrodingerProblem(problemParams, paramLib, 1, commT));
-  }
-  else if (method == "Schrodinger 2D") {
-    strategy = rcp(new QCAD::SchrodingerProblem(problemParams, paramLib, 2, commT));
-  }
-  else if (method == "Schrodinger 3D") {
-    strategy = rcp(new QCAD::SchrodingerProblem(problemParams, paramLib, 3, commT));
   }
   else if (method == "ThermoElectrostatics 1D") {
     strategy = rcp(new Albany::ThermoElectrostaticsProblem(problemParams, paramLib, 1));
@@ -286,74 +249,9 @@ Albany::ProblemFactory::create()
     strategy = rcp(new Albany::LinearElasticityModalProblem(problemParams, paramLib, 3));
   }
 #endif
-#ifdef ALBANY_AFRL
-  else if (method == "MultiScale Heat 1D") {
-    strategy = rcp(new Albany::MultiScaleHeatProblem(problemParams, paramLib, 1, commT));
-  }
-  else if (method == "MultiScale Heat 2D") {
-    strategy = rcp(new Albany::MultiScaleHeatProblem(problemParams, paramLib, 2, commT));
-  }
-  else if (method == "MultiScale Heat 3D") {
-    strategy = rcp(new Albany::MultiScaleHeatProblem(problemParams, paramLib, 3, commT));
-  }
-  else if (method == "Rotation Mechanics 3D") {
-    strategy = rcp(new Albany::RotationMechanicsProblem(problemParams, paramLib, getNumDim(method), rc_mgr, commT));
-  }
-#endif
-#ifdef ALBANY_AMP
-  else if (method == "Phase 1D") {
-    strategy = rcp(new Albany::PhaseProblem(problemParams, paramLib, 1, commT));
-  }
-  else if (method == "Phase 2D") {
-    strategy = rcp(new Albany::PhaseProblem(problemParams, paramLib, 2, commT));
-  }
-  else if (method == "Phase 3D") {
-    strategy = rcp(new Albany::PhaseProblem(problemParams, paramLib, 3, commT));
-  }
-  else if (method == "AMPThermoMechanics 1D") {
-    strategy = rcp(new Albany::AMPThermoMechanics(problemParams, paramLib, 1, commT));
-  }
-  else if (method == "AMPThermoMechanics 2D") {
-    strategy = rcp(new Albany::AMPThermoMechanics(problemParams, paramLib, 2, commT));
-  }
-  else if (method == "AMPThermoMechanics 3D") {
-    strategy = rcp(new Albany::AMPThermoMechanics(problemParams, paramLib, 3, commT));
-  }
-#endif
-#ifdef ALBANY_ANISO
-  else if (method == "ANISO Advection 2D") {
-    strategy = rcp(new Albany::AdvectionProblem(problemParams, paramLib, 2, commT));
-  }
-  else if (method == "ANISO Advection 3D") {
-    strategy = rcp(new Albany::AdvectionProblem(problemParams, paramLib, 3, commT));
-  }
-#endif
-#ifdef ALBANY_HYDRIDE
-  else if (method == "Hydride 2D") {
-    strategy = rcp(new Albany::HydrideProblem(problemParams, paramLib, 2, commT));
-  }
-  else if (method == "HydMorph 2D") {
-    strategy = rcp(new Albany::HydMorphProblem(problemParams, paramLib, 2, commT));
-  }
-  else if (method == "MesoScaleLink 1D") {
-    strategy = rcp(new Albany::MesoScaleLinkProblem(problemParams, paramLib, 1, commT));
-  }
-  else if (method == "MesoScaleLink 2D") {
-    strategy = rcp(new Albany::MesoScaleLinkProblem(problemParams, paramLib, 2, commT));
-  }
-  else if (method == "MesoScaleLink 3D") {
-    strategy = rcp(new Albany::MesoScaleLinkProblem(problemParams, paramLib, 3, commT));
-  }
-  else if (method == "LaplaceBeltrami 2D") {
-    strategy = rcp(new Albany::LaplaceBeltramiProblem(problemParams, paramLib, 2, commT));
-  }
-  else if (method == "LaplaceBeltrami 3D") {
-    strategy = rcp(new Albany::LaplaceBeltramiProblem(problemParams, paramLib, 3, commT));
-  }
-#endif
-#ifdef ALBANY_FELIX
-  else if (FELIX::ProblemFactory::hasProblem(method)) {
-    FELIX::ProblemFactory felix_factory(problemParams,discretizationParams,paramLib);
+#ifdef ALBANY_LANDICE
+  else if (LandIce::ProblemFactory::hasProblem(method)) {
+    LandIce::ProblemFactory felix_factory(problemParams,discretizationParams,paramLib);
     strategy = felix_factory.create();
   }
 #endif
@@ -378,6 +276,23 @@ Albany::ProblemFactory::create()
   }
   else if (method == "Aeras Hydrostatic" ) {
     strategy = rcp(new Aeras::HydrostaticProblem(problemParams, paramLib, 2));
+  }
+#endif
+#ifdef ALBANY_TSUNAMI
+  else if (method == "Tsunami Steady Stokes 2D" ) {
+    strategy = rcp(new Tsunami::NavierStokes(problemParams, paramLib, 2, false, false));
+  }
+  else if (method == "Tsunami Navier Stokes 2D" ) {
+    strategy = rcp(new Tsunami::NavierStokes(problemParams, paramLib, 2));
+  }
+  else if (method == "Tsunami Navier Stokes 3D" ) {
+    strategy = rcp(new Tsunami::NavierStokes(problemParams, paramLib, 3));
+  }
+  else if (method == "Tsunami Boussinesq 1D" ) {
+    strategy = rcp(new Tsunami::Boussinesq(problemParams, paramLib, 1));
+  }
+  else if (method == "Tsunami Boussinesq 2D" ) {
+    strategy = rcp(new Tsunami::Boussinesq(problemParams, paramLib, 2));
   }
 #endif
   else if (method == "Peridigm Code Coupling" ) {

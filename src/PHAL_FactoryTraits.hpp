@@ -9,32 +9,28 @@
 #ifndef PHAL_FACTORY_TRAITS_HPP
 #define PHAL_FACTORY_TRAITS_HPP
 
+// Pull in all Albany configuration macros
+#include "Albany_config.h"
+
 // User Defined Evaluator Types
 
 #if defined(ALBANY_LCM)
 #include "LCM/evaluators/bc/EquilibriumConcentrationBC.hpp"
 #include "LCM/evaluators/bc/KfieldBC.hpp"
 #include "LCM/evaluators/bc/PDNeighborFitBC.hpp"
-#include "LCM/evaluators/bc/TimeDepBC.hpp"
-#include "LCM/evaluators/bc/TimeDepSDBC.hpp"
 #include "LCM/evaluators/bc/TimeTracBC.hpp"
 #include "LCM/evaluators/bc/TorsionBC.hpp"
 #include "LCM/evaluators/Time.hpp"
-#if defined(HAVE_STK)
+#if defined(ALBANY_STK)
 #include "LCM/evaluators/bc/SchwarzBC.hpp"
 #include "LCM/evaluators/bc/StrongSchwarzBC.hpp"
-#endif // HAVE_STK
+#endif // ALBANY_STK
 #endif // ALBANY_LCM
-
-#ifdef ALBANY_QCAD
-#include "QCAD_PoissonDirichlet.hpp"
-#include "QCAD_PoissonNeumann.hpp"
-#include "QCAD_PoissonSourceNeumann.hpp"
-#include "QCAD_PoissonSourceInterface.hpp"
-#endif // ALBANY_QCAD
 
 #include "PHAL_SDirichlet.hpp"
 #include "PHAL_Dirichlet.hpp"
+#include "PHAL_TimeDepDBC.hpp"
+#include "PHAL_TimeDepSDBC.hpp"
 #include "PHAL_DirichletCoordinateFunction.hpp"
 #include "PHAL_DirichletField.hpp"
 #include "PHAL_DirichletOffNodeSet.hpp"
@@ -73,17 +69,16 @@ namespace PHAL {
     static const int id_dirichlet_coordinate_function  =  2;
     static const int id_dirichlet_field                =  3;
     static const int id_dirichlet_off_nodeset          =  4; // To handle equations on side set (see PHAL_DirichletOffNodeSet)
-    static const int id_qcad_poisson_dirichlet         =  5;
-    static const int id_sdbc                           =  6; 
-    static const int id_kfield_bc                      =  7; // Only for LCM probs
-    static const int id_eq_concentration_bc            =  8; // Only for LCM probs
-    static const int id_timedep_bc                     =  9; // Only for LCM probs
+    static const int id_timedep_bc                     =  5; // Only for LCM probs
+    static const int id_timedep_sdbc                   =  6; // Only for LCM probs
+    static const int id_sdbc                           =  7;
+    static const int id_kfield_bc                      =  8; // Only for LCM probs
+    static const int id_eq_concentration_bc            =  9; // Only for LCM probs
     static const int id_time                           = 10; // Only for LCM probs
     static const int id_torsion_bc                     = 11; // Only for LCM probs
-    static const int id_timedep_sdbc                   = 12; // Only for LCM probs
-    static const int id_schwarz_bc                     = 13; // Only for LCM probs
-    static const int id_strong_schwarz_bc              = 14; // Only for LCM probs
-    static const int id_pd_neigh_fit_bc                = 15; // Only for LCM-Peridigm coupling
+    static const int id_schwarz_bc                     = 12; // Only for LCM probs
+    static const int id_strong_schwarz_bc              = 13; // Only for LCM probs
+    static const int id_pd_neigh_fit_bc                = 14; // Only for LCM-Peridigm coupling
 
     typedef Sacado::mpl::vector<
         PHAL::Dirichlet<_,Traits>,                //  0
@@ -91,27 +86,21 @@ namespace PHAL {
         PHAL::DirichletCoordFunction<_,Traits>,   //  2
         PHAL::DirichletField<_,Traits>,           //  3
         PHAL::DirichletOffNodeSet<_,Traits>,      //  4
-#ifdef ALBANY_QCAD
-        QCAD::PoissonDirichlet<_,Traits>          //  5
-#else
-        PHAL::Dirichlet<_,Traits>                 //  5 dummy
-#endif
-        ,
-        PHAL::SDirichlet<_, Traits>               //  6
+        PHAL::TimeDepDBC<_, Traits>,              //  5
+        PHAL::TimeDepSDBC<_, Traits>,             //  6
+        PHAL::SDirichlet<_, Traits>               //  7
 #if defined(ALBANY_LCM)
         ,
-        LCM::KfieldBC<_,Traits>,                  //  7
-        LCM::EquilibriumConcentrationBC<_,Traits>, // 8
-        LCM::TimeDepBC<_, Traits>,                //  9
+        LCM::KfieldBC<_,Traits>,                  //  8
+        LCM::EquilibriumConcentrationBC<_,Traits>, // 9
         LCM::Time<_, Traits>,                     //  10
-        LCM::TorsionBC<_, Traits>,                 // 11
-        LCM::TimeDepSDBC<_, Traits>               // 12
+        LCM::TorsionBC<_, Traits>                  // 11
 #endif
-#if defined(ALBANY_LCM) && defined(HAVE_STK)
+#if defined(ALBANY_LCM) && defined(ALBANY_STK)
         ,
-        LCM::SchwarzBC<_, Traits>,                 // 13
-        LCM::StrongSchwarzBC<_, Traits>,           // 14
-        LCM::PDNeighborFitBC<_, Traits>            // 15
+        LCM::SchwarzBC<_, Traits>,                 // 12
+        LCM::StrongSchwarzBC<_, Traits>,           // 13
+        LCM::PDNeighborFitBC<_, Traits>            // 14
 #endif
         > EvaluatorTypes;
 };
@@ -126,10 +115,7 @@ namespace PHAL {
     static const int id_gather_solution            =  3;
     static const int id_load_stateField            =  4;
     static const int id_GatherScalarNodalParameter =  5;
-    static const int id_qcad_poisson_neumann       =  6; // Only for QCAD probs
-    static const int id_qcad_poissonsource_neumann =  7; // Only for QCAD probs
-    static const int id_qcad_poissonsource_interface =  8; // Only for QCAD probs
-    static const int id_timedep_bc                =  9; // Only for LCM probs
+    static const int id_timedep_bc                 =  6; // Only for LCM probs
 
 
     typedef Sacado::mpl::vector<
@@ -138,18 +124,9 @@ namespace PHAL {
        PHAL::GatherCoordinateVector<_,Traits>,    //  2
        PHAL::GatherSolution<_,Traits>,            //  3
        PHAL::LoadStateField<_,Traits>,            //  4
-       PHAL::GatherScalarNodalParameter<_,Traits>,//  5
-#ifdef ALBANY_QCAD
-       QCAD::PoissonNeumann<_,Traits>,            //  6
-       QCAD::PoissonSourceNeumann<_,Traits>,      //  7
-       QCAD::PoissonSourceInterface<_,Traits>     //  8
-#else
-       PHAL::Neumann<_,Traits>,                   //  6 dummy
-       PHAL::Neumann<_,Traits>,                   //  7 dummy
-       PHAL::Neumann<_,Traits>                    //  8 dummy
-#endif
+       PHAL::GatherScalarNodalParameter<_,Traits> //  5
 #if defined(ALBANY_LCM)
-       , LCM::TimeTracBC<_, Traits>               //  9
+       , LCM::TimeTracBC<_, Traits>               //  6
 #endif
     > EvaluatorTypes;
 };

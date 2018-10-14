@@ -8,7 +8,7 @@
 #include "Albany_PUMIMeshStruct.hpp"
 
 #include <gmi_mesh.h>
-#ifdef SCOREC_SIMMODEL
+#ifdef ALBANY_SCOREC_SIMMODEL
 #include <gmi_sim.h>
 #include <SimUtil.h>
 #endif
@@ -72,7 +72,7 @@ Albany::PUMIMeshStruct::PUMIMeshStruct(
   if(params->isParameter("Mesh Model Input File Name"))
     model_file = params->get<std::string>("Mesh Model Input File Name");
 
-#ifdef SCOREC_SIMMODEL
+#ifdef ALBANY_SCOREC_SIMMODEL
   if (params->isParameter("Acis Model Input File Name"))
     model_file = params->get<std::string>("Parasolid Model Input File Name");
 
@@ -154,8 +154,8 @@ Albany::PUMIMeshStruct::PUMIMeshStruct(
         << " from restart file: " << name << std::endl;
   }
 
-  if (params->isParameter("Load FELIX Data"))
-    shouldLoadFELIXData = true;
+  if (params->isParameter("Load LandIce Data"))
+    shouldLoadLandIceData = true;
 
 }
 
@@ -205,7 +205,7 @@ Albany::PUMIMeshStruct::getValidDiscretizationParameters() const
 
   validPL->set<int>("Write Restart File at Step", 0, "Continuation step to write restart files");
   validPL->set<double>("PUMI Restart Time", 0, "Simulation time to restart from");
-  validPL->set<bool>("Load FELIX Data", false, "Load fields required for FELIX FO problem");
+  validPL->set<bool>("Load LandIce Data", false, "Load fields required for LandIce FO problem");
 
   validPL->set<bool>("Use Serial Mesh", false, "Read in a single mesh on PE 0 and rebalance");
 

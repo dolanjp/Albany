@@ -22,9 +22,10 @@ namespace LCM {
 
  */
 
-template<typename EvalT, typename Traits>
+template <typename EvalT, typename Traits>
 class DefGrad : public PHX::EvaluatorWithBaseImpl<Traits>,
-                public PHX::EvaluatorDerived<EvalT, Traits> {
+                public PHX::EvaluatorDerived<EvalT, Traits>
+{
  public:
   DefGrad(const Teuchos::ParameterList& p);
 
@@ -42,11 +43,11 @@ class DefGrad : public PHX::EvaluatorWithBaseImpl<Traits>,
 
   // Input:
   PHX::MDField<const ScalarT, Cell, QuadPoint, Dim, Dim> GradU;
-  PHX::MDField<const MeshScalarT, Cell, QuadPoint> weights;
+  PHX::MDField<const MeshScalarT, Cell, QuadPoint>       weights;
 
   // Output:
   PHX::MDField<ScalarT, Cell, QuadPoint, Dim, Dim> defgrad;
-  PHX::MDField<ScalarT, Cell, QuadPoint> J;
+  PHX::MDField<ScalarT, Cell, QuadPoint>           J;
 
   unsigned int numQPs;
   unsigned int numDims;
@@ -58,5 +59,5 @@ class DefGrad : public PHX::EvaluatorWithBaseImpl<Traits>,
   //! stabilization parameter for the weighted average
   ScalarT alpha;
 };
-}
+}  // namespace LCM
 #endif

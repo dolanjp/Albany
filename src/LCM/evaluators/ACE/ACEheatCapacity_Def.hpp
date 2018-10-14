@@ -12,23 +12,34 @@
 namespace LCM {
 
 template <typename EvalT, typename Traits>
-ACEheatCapacity<EvalT, Traits>::ACEheatCapacity(Teuchos::ParameterList& p)
-    : heat_capacity_(
-          p.get<std::string>("QP Variable Name"),
-          p.get<Teuchos::RCP<PHX::DataLayout>>("QP Scalar Data Layout"))
+ACEheatCapacity<EvalT, Traits>::ACEheatCapacity(
+    Teuchos::ParameterList&              p,
+    const Teuchos::RCP<Albany::Layouts>& dl)
+    : heat_capacity_(  // evaluated
+          p.get<std::string>("ACE Heat Capacity"),
+          dl->qp_scalar),
+      porosity_(  // dependent
+          p.get<std::string>("ACE Porosity"),
+          dl->qp_scalar),
+      ice_saturation_(  // dependent
+          p.get<std::string>("ACE Ice Saturation"),
+          dl->qp_scalar),
+      water_saturation_(  // dependent
+          p.get<std::string>("ACE Water Saturation"),
+          dl->qp_scalar)
 {
   Teuchos::ParameterList* heat_capacity_list =
-    p.get<Teuchos::ParameterList*>("Parameter List");
+      p.get<Teuchos::ParameterList*>("Parameter List");
 
   Teuchos::RCP<PHX::DataLayout> vector_dl =
-    p.get< Teuchos::RCP<PHX::DataLayout>>("QP Vector Data Layout");
+      p.get<Teuchos::RCP<PHX::DataLayout>>("QP Vector Data Layout");
   std::vector<PHX::DataLayout::size_type> dims;
   vector_dl->dimensions(dims);
   num_qps_  = dims[1];
   num_dims_ = dims[2];
 
   Teuchos::RCP<ParamLib> paramLib =
-    p.get< Teuchos::RCP<ParamLib>>("Parameter Library", Teuchos::null);
+      p.get<Teuchos::RCP<ParamLib>>("Parameter Library", Teuchos::null);
 
   // Read density values
   cp_ice_ = heat_capacity_list->get<double>("Ice Value");
@@ -38,7 +49,14 @@ ACEheatCapacity<EvalT, Traits>::ACEheatCapacity(Teuchos::ParameterList& p)
   // Add heat capacity as a Sacado-ized parameter
   this->registerSacadoParameter("ACE Heat Capacity", paramLib);
 
+  // List evaluated fields
   this->addEvaluatedField(heat_capacity_);
+
+  // List dependent fields
+  this->addDependentField(porosity_);
+  this->addDependentField(ice_saturation_);
+  this->addDependentField(water_saturation_);
+
   this->setName("ACE Heat Capacity" + PHX::typeAsString<EvalT>());
 }
 
@@ -49,30 +67,28 @@ ACEheatCapacity<EvalT, Traits>::postRegistrationSetup(
     typename Traits::SetupData d,
     PHX::FieldManager<Traits>& fm)
 {
+  // List all fields
   this->utils.setFieldData(heat_capacity_, fm);
+  this->utils.setFieldData(porosity_, fm);
+  this->utils.setFieldData(ice_saturation_, fm);
+  this->utils.setFieldData(water_saturation_, fm);
   return;
 }
 
-//
-// This function needs to know the water, ice, and sediment intrinsic heat
-// capacities plus the current QP ice/water saturations and QP porosity which  
-// come from the material model.
 // The heat capacity calculation is based on a volume average mixture model.
 template <typename EvalT, typename Traits>
 void
-ACEheatCapacity<EvalT, Traits>::evaluateFields(typename Traits::EvalData workset)
+ACEheatCapacity<EvalT, Traits>::evaluateFields(
+    typename Traits::EvalData workset)
 {
   int num_cells = workset.numCells;
-  double por = 0.50;  // this needs to come from QP value, here temporary
-  double w = 0.50;  // this is an evolving QP parameter, here temporary
-  double f = 0.50;  // this is an evolving QP parameter, here temporary
-  // notes: if the material model is ACEice, por = 1.0, f = 1.0, w = 0.0
-  //        if the material model is ACEpermafrost, then por, f, and w evolve
 
   for (int cell = 0; cell < num_cells; ++cell) {
     for (int qp = 0; qp < num_qps_; ++qp) {
-      heat_capacity_(cell, qp) = por*(cp_ice_*f + cp_wat_*w) + 
-                                 ((1.0-por)*cp_sed_);
+      heat_capacity_(cell, qp) =
+          porosity_(cell, qp) * (cp_ice_ * ice_saturation_(cell, qp) +
+                                 cp_wat_ * water_saturation_(cell, qp)) +
+          ((1.0 - porosity_(cell, qp)) * cp_sed_);
     }
   }
 
@@ -84,20 +100,14 @@ template <typename EvalT, typename Traits>
 typename ACEheatCapacity<EvalT, Traits>::ScalarT&
 ACEheatCapacity<EvalT, Traits>::getValue(const std::string& n)
 {
-  if (n == "ACE Ice Heat Capacity") {
-    return cp_ice_;
-  }
-  if (n == "ACE Water Heat Capacity") {
-    return cp_wat_;
-  }
-  if (n == "ACE Sediment Heat Capacity") {
-    return cp_sed_;
-  }
+  if (n == "ACE Ice Heat Capacity") { return cp_ice_; }
+  if (n == "ACE Water Heat Capacity") { return cp_wat_; }
+  if (n == "ACE Sediment Heat Capacity") { return cp_sed_; }
 
-  ALBANY_ASSERT(false, 
-                "Invalid request for value of ACE Component Heat Capacity");
+  ALBANY_ASSERT(
+      false, "Invalid request for value of ACE Component Heat Capacity");
 
-  return cp_wat_; // does it matter what we return here?
+  return cp_wat_;  // does it matter what we return here?
 }
 
 }  // namespace LCM

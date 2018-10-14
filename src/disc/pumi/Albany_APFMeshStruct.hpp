@@ -22,7 +22,7 @@
 
 #include <apf.h>
 #include <apfMesh2.h>
-#if defined(HAVE_STK) && defined(ALBANY_SEACAS)
+#if defined(ALBANY_STK) && defined(ALBANY_SEACAS)
 #include <apfSTK.h>
 #else
 #include <apfAlbany.h>
@@ -88,7 +88,7 @@ class APFMeshStruct : public Albany::AbstractMeshStruct {
     std::vector<Teuchos::RCP<PUMIQPData<double, 3> > > qpvector_states;
     std::vector<Teuchos::RCP<PUMIQPData<double, 4> > > qptensor_states;
 
-    /* only for FELIX problems */
+    /* only for LandIce problems */
     std::vector<Teuchos::RCP<PUMIQPData<double, 2> > > elemnodescalar_states;
 
     std::vector<std::string> nsNames;
@@ -104,12 +104,6 @@ class APFMeshStruct : public Albany::AbstractMeshStruct {
 
     bool useCompositeTet(){ return compositeTet; }
 
-    const Albany::DynamicDataArray<Albany::CellSpecs>::type& getMeshDynamicData() const
-        { return meshDynamicData; }
-
-    //! Process PUMI mesh for element block specific info
-    void setupMeshBlkInfo();
-
     //! returns true iff the field was found
     bool findOrCreateNodalField(char const* name, int value_type);
     virtual apf::Field* createNodalField(char const* name, int valueType) = 0;
@@ -118,7 +112,7 @@ class APFMeshStruct : public Albany::AbstractMeshStruct {
     double restartDataTime;
     int restartWriteStep;
 
-    bool shouldLoadFELIXData;
+    bool shouldLoadLandIceData;
     bool shouldWriteAsciiVtk;
 
     int neq; //! number of equations (components) per node in the solution and residual
@@ -167,9 +161,6 @@ protected:
     Teuchos::RCP<Teuchos::FancyOStream> out;
 
     Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> > meshSpecs;
-
-    // Information that changes when the mesh adapts
-    Albany::DynamicDataArray<Albany::CellSpecs>::type meshDynamicData;
 
     apf::Mesh2* mesh;
     gmi_model* model;

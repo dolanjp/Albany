@@ -4,6 +4,12 @@
 ##    in the file "license.txt" in the top-level Albany directory  //
 ##*****************************************************************//
 
+# Configure the file containing Albany configuration macros,
+# and add its folder to the include directories
+CONFIGURE_FILE (${CMAKE_CURRENT_SOURCE_DIR}/Albany_config.h.in
+                ${CMAKE_CURRENT_BINARY_DIR}/Albany_config.h)
+INCLUDE_DIRECTORIES (${CMAKE_CURRENT_BINARY_DIR})
+
 
 INCLUDE(CheckCXXSourceCompiles)
 set(CMAKE_REQUIRED_INCLUDES ${Trilinos_INCLUDE_DIRS})
@@ -28,9 +34,7 @@ SET(SOURCES
   PHAL_Utilities.cpp
   )
 
-#IKT, FIXME: remove OR ALBANY_ATO from following if when
-#ATO is free of Epetra
-IF (ALBANY_EPETRA OR ALBANY_ATO)
+IF (ALBANY_EPETRA)
   SET(SOURCES ${SOURCES} Albany_ObserverFactory.cpp)
   SET(SOURCES ${SOURCES} Petra_Converters_64.cpp)
 ENDIF()
@@ -100,6 +104,7 @@ SET(SOURCES ${SOURCES}
   utility/DisplayTable.cpp
   utility/PerformanceContext.cpp
   utility/TimeMonitor.cpp
+  utility/Albany_TpetraThyraUtils.cpp
   utility/VariableMonitor.cpp
   utility/StaticAllocator.cpp
   )
@@ -112,6 +117,7 @@ SET(HEADERS ${HEADERS}
   utility/string.hpp
   utility/TimeGuard.hpp
   utility/TimeMonitor.hpp
+  utility/Albany_TpetraThyraUtils.hpp
   utility/VariableMonitor.hpp
   utility/StaticAllocator.hpp
   utility/math/Tensor.hpp
@@ -132,6 +138,7 @@ SET(SOURCES ${SOURCES}
   problems/Albany_EvaluatorUtils.cpp
   problems/Albany_HeatProblem.cpp
   problems/Albany_Layouts.cpp
+  problems/Albany_PopulateMesh.cpp
   problems/Albany_ProblemFactory.cpp
   problems/Albany_ProblemUtils.cpp
   problems/Albany_ResponseUtilities.cpp
@@ -148,6 +155,7 @@ SET(PDE_SRCS
   problems/Albany_ODEProblem.cpp
   problems/Albany_NavierStokes.cpp
   problems/Albany_PNPProblem.cpp
+  problems/Albany_ThermoElectrostaticsProblem.cpp
   )
 SET(HEADERS ${HEADERS}
   problems/Albany_AbstractProblem.hpp
@@ -155,8 +163,10 @@ SET(HEADERS ${HEADERS}
   problems/Albany_BCUtils_Def.hpp
   problems/Albany_EvaluatorUtils.hpp
   problems/Albany_EvaluatorUtils_Def.hpp
+  problems/Albany_GeneralPurposeFieldsNames.hpp
   problems/Albany_HeatProblem.hpp
   problems/Albany_Layouts.hpp
+  problems/Albany_PopulateMesh.hpp
   problems/Albany_ProblemFactory.hpp
   problems/Albany_ProblemUtils.hpp
   problems/Albany_ResponseUtilities.hpp
@@ -174,17 +184,10 @@ SET(PDE_HDRS
   problems/Albany_NavierStokes.hpp
   problems/Albany_ODEProblem.hpp
   problems/Albany_PNPProblem.hpp
+  problems/Albany_ThermoElectrostaticsProblem.hpp
   )
 
 #responses
-IF (ALBANY_EPETRA)
-SET(SOURCES ${SOURCES}
-  responses/Epetra_GatherAllV.cpp
-)
-SET(HEADERS ${HEADERS}
-  responses/Epetra_GatherAllV.hpp
-)
-ENDIF()
 SET(SOURCES ${SOURCES}
   responses/Albany_AggregateScalarResponseFunction.cpp
   responses/Albany_CumulativeScalarResponseFunction.cpp
@@ -200,6 +203,7 @@ SET(SOURCES ${SOURCES}
   responses/Albany_SolutionFileResponseFunction.cpp
   responses/Albany_SolutionMaxValueResponseFunction.cpp
   responses/Albany_SolutionMinValueResponseFunction.cpp
+  responses/Albany_SolutionResponseFunction.cpp
   responses/Albany_SolutionTwoNormResponseFunction.cpp
   responses/Albany_SolutionValuesResponseFunction.cpp
   )
@@ -217,36 +221,16 @@ SET(HEADERS ${HEADERS}
   responses/Albany_SolutionCullingStrategy.hpp
   responses/Albany_SolutionFileResponseFunction.hpp
   responses/Albany_SolutionMaxValueResponseFunction.hpp
+  responses/Albany_SolutionMinValueResponseFunction.cpp
+  responses/Albany_SolutionResponseFunction.hpp
   responses/Albany_SolutionTwoNormResponseFunction.hpp
   responses/Albany_SolutionValuesResponseFunction.hpp
   )
-
-IF(ALBANY_EPETRA)
-
-SET(SOURCES ${SOURCES}
-  responses/Albany_SolutionResponseFunction.cpp
-)
-
-SET(HEADERS ${HEADERS}
-  responses/Albany_SolutionResponseFunction.hpp
-)
-
-ENDIF()
-
-IF(ALBANY_EPETRA)
-SET(SOURCES ${SOURCES}
-  responses/Epetra_ImportWithAlternateMap.cpp
-)
-SET(HEADERS ${HEADERS}
-  responses/Epetra_ImportWithAlternateMap.hpp
-)
-ENDIF()
 
 #discretization
 SET(SOURCES ${SOURCES}
   disc/Adapt_NodalDataBase.cpp
   disc/Adapt_NodalDataVector.cpp
-  disc/Albany_AbstractMeshStruct.cpp
   disc/Albany_DiscretizationFactory.cpp
   )
 SET(HEADERS ${HEADERS}
@@ -266,15 +250,20 @@ IF (ALBANY_CONTACT)
 
   SET(SOURCES ${SOURCES}
     disc/Albany_ContactManager.cpp
+    evaluators/scatter/PHAL_MortarContactResidual.cpp
   )
   SET(HEADERS ${HEADERS}
     disc/Albany_ContactManager.hpp
+    evaluators/scatter/PHAL_MortarContactResidual.hpp
+    evaluators/scatter/PHAL_MortarContactResidual_Def.hpp
   )
 ENDIF ()
 
 #evaluators
 SET(SOURCES ${SOURCES}
   evaluators/bc/PHAL_Dirichlet.cpp
+  evaluators/bc/PHAL_TimeDepDBC.cpp
+  evaluators/bc/PHAL_TimeDepSDBC.cpp
   evaluators/bc/PHAL_SDirichlet.cpp
   evaluators/bc/PHAL_DirichletCoordinateFunction.cpp
   evaluators/bc/PHAL_DirichletField.cpp
@@ -332,6 +321,7 @@ SET(SOURCES ${SOURCES}
   evaluators/utility/PHAL_ComputeBasisFunctionsSide.cpp
   evaluators/utility/PHAL_Constant.cpp
   evaluators/utility/PHAL_ConvertFieldType.cpp
+  evaluators/utility/PHAL_DummyResidual.cpp
   evaluators/utility/PHAL_FieldFrobeniusNorm.cpp
   evaluators/utility/PHAL_LangevinNoiseTerm.cpp
   evaluators/utility/PHAL_MapToPhysicalFrame.cpp
@@ -343,7 +333,7 @@ SET(SOURCES ${SOURCES}
   evaluators/utility/QCAD_MeshRegion.cpp
   )
 
-IF (ALBANY_HAVE_STK)
+IF (ALBANY_STK)
  SET(SOURCES ${SOURCES}
    evaluators/state/PHAL_SaveSideSetStateField.cpp)
 ENDIF()
@@ -365,6 +355,7 @@ SET(PDE_SRCS ${PDE_SRCS}
   evaluators/pde/PHAL_ComprNSResid.cpp
   evaluators/pde/PHAL_ComprNSViscosity.cpp
   evaluators/pde/PHAL_HelmholtzResid.cpp
+  evaluators/pde/PHAL_JouleHeating.cpp
   evaluators/pde/PHAL_LinComprNSBodyForce.cpp
   evaluators/pde/PHAL_LinComprNSResid.cpp
   evaluators/pde/PHAL_NSBodyForce.cpp
@@ -379,13 +370,17 @@ SET(PDE_SRCS ${PDE_SRCS}
   evaluators/pde/PHAL_NSTauT.cpp
   evaluators/pde/PHAL_NSThermalEqResid.cpp
   evaluators/pde/PHAL_ODEResid.cpp
+  evaluators/pde/PHAL_PoissonResid.cpp
   evaluators/pde/PHAL_Permittivity.cpp
+  evaluators/pde/PHAL_TEProp.cpp
   evaluators/pde/PNP_ConcentrationResid.cpp
   evaluators/pde/PNP_PotentialResid.cpp
   )
 
 SET(HEADERS ${HEADERS}
   evaluators/bc/PHAL_Dirichlet.hpp
+  evaluators/bc/PHAL_TimeDepDBC.hpp
+  evaluators/bc/PHAL_TimeDepSDBC.hpp
   evaluators/bc/PHAL_SDirichlet.hpp
   evaluators/bc/PHAL_DirichletCoordinateFunction.hpp
   evaluators/bc/PHAL_DirichletCoordinateFunction_Def.hpp
@@ -394,6 +389,8 @@ SET(HEADERS ${HEADERS}
   evaluators/bc/PHAL_DirichletOffNodeSet.hpp
   evaluators/bc/PHAL_DirichletOffNodeSet_Def.hpp
   evaluators/bc/PHAL_Dirichlet_Def.hpp
+  evaluators/bc/PHAL_TimeDepDBC_Def.hpp
+  evaluators/bc/PHAL_TimeDepSDBC_Def.hpp
   evaluators/bc/PHAL_SDirichlet_Def.hpp
   evaluators/bc/PHAL_IdentityCoordinateFunctionTraits.hpp
   evaluators/bc/PHAL_IdentityCoordinateFunctionTraits_Def.hpp
@@ -497,6 +494,8 @@ SET(HEADERS ${HEADERS}
   evaluators/utility/PHAL_Constant_Def.hpp
   evaluators/utility/PHAL_ConvertFieldType.hpp
   evaluators/utility/PHAL_ConvertFieldType_Def.hpp
+  evaluators/utility/PHAL_DummyResidual.hpp
+  evaluators/utility/PHAL_DummyResidual_Def.hpp
   evaluators/utility/PHAL_FieldFrobeniusNorm.hpp
   evaluators/utility/PHAL_FieldFrobeniusNorm_Def.hpp
   evaluators/utility/PHAL_LangevinNoiseTerm.hpp
@@ -516,7 +515,7 @@ SET(HEADERS ${HEADERS}
   evaluators/utility/QCAD_MeshRegion_Def.hpp
   )
 
-IF (ALBANY_HAVE_STK)
+IF (ALBANY_STK)
   SET(HEADERS ${HEADERS}
     evaluators/state/PHAL_SaveSideSetStateField.hpp
     evaluators/state/PHAL_SaveSideSetStateField_Def.hpp)
@@ -555,6 +554,8 @@ SET(PDE_HDRS ${PDE_HDRS}
   evaluators/pde/PHAL_ComprNSViscosity_Def.hpp
   evaluators/pde/PHAL_HelmholtzResid.hpp
   evaluators/pde/PHAL_HelmholtzResid_Def.hpp
+  evaluators/pde/PHAL_JouleHeating.hpp
+  evaluators/pde/PHAL_JouleHeating_Def.hpp
   evaluators/pde/PHAL_LinComprNSBodyForce.hpp
   evaluators/pde/PHAL_LinComprNSBodyForce_Def.hpp
   evaluators/pde/PHAL_LinComprNSResid.hpp
@@ -583,6 +584,12 @@ SET(PDE_HDRS ${PDE_HDRS}
   evaluators/pde/PHAL_NSThermalEqResid_Def.hpp
   evaluators/pde/PHAL_ODEResid.hpp
   evaluators/pde/PHAL_ODEResid_Def.hpp
+  evaluators/pde/PHAL_PoissonResid.hpp
+  evaluators/pde/PHAL_PoissonResid_Def.hpp
+  evaluators/pde/PHAL_Permittivity.hpp
+  evaluators/pde/PHAL_Permittivity_Def.hpp
+  evaluators/pde/PHAL_TEProp.hpp
+  evaluators/pde/PHAL_TEProp_Def.hpp
   evaluators/pde/PNP_ConcentrationResid.hpp
   evaluators/pde/PNP_ConcentrationResid_Def.hpp
   evaluators/pde/PNP_PotentialResid.hpp
@@ -599,41 +606,6 @@ IF(ALBANY_ASCR AND ALBANY_EPETRA)
     )
 ENDIF()
 
-IF(ALBANY_HYDRIDE AND (NOT ALBANY_DEMO_PDES))
-  SET(SOURCES ${SOURCES}
-    evaluators/utility/PHAL_LangevinNoiseTerm.cpp
-    )
-  SET(HEADERS ${HEADERS}
-    evaluators/utility/PHAL_LangevinNoiseTerm.hpp
-    evaluators/utility/PHAL_LangevinNoiseTerm_Def.hpp
-    )
-ENDIF()
-
-
-if (ALBANY_MOR AND ALBANY_EPETRA)
-  include_directories (./MOR)
-
-  set (MOR_ALBANY_HEADERS
-    MOR/Albany_DiscretizationDofListProvider.hpp
-    MOR/Albany_MORDiscretizationUtils.hpp
-    MOR/Albany_MORFacade.hpp
-    MOR/Albany_MORFacadeImpl.hpp
-    MOR/Albany_StkEpetraMVSource.hpp
-    MOR/Albany_StkNodalBasisSource.hpp
-    )
-
-  set (MOR_ALBANY_SOURCES
-    MOR/Albany_DiscretizationDofListProvider.cpp
-    MOR/Albany_MORDiscretizationUtils.cpp
-    MOR/Albany_MORFacadeImpl.cpp
-    MOR/Albany_StkEpetraMVSource.cpp
-    MOR/Albany_StkNodalBasisSource.cpp
-    )
-
-  set(SOURCES ${SOURCES} ${MOR_ALBANY_SOURCES})
-  set(HEADERS ${HEADERS} ${MOR_ALBANY_HEADERS})
-endif ()
-
 IF (ALBANY_SCOREC_STANDALONE)
   SET(SCOREC_LIB SCOREC::core)
 ENDIF()
@@ -645,9 +617,17 @@ target_link_libraries(albanyLib ${SCOREC_LIB} ${Trilinos_LIBRARIES})
 
 set(ALB_TRILINOS_LIBS ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 
-include_directories (${Trilinos_INCLUDE_DIRS}
-                     ${Trilinos_TPL_INCLUDE_DIRS}
-                     ${ALBANY_PUMI_INCLUDE_DIRS}
+# We may not want warnings from Trilinos and/or its TPLs...
+IF (ALBANY_SUPPRESS_TRILINOS_WARNINGS)
+  include_directories (SYSTEM
+                       ${Trilinos_INCLUDE_DIRS}
+                       ${Trilinos_TPL_INCLUDE_DIRS})
+ELSE()
+  include_directories (${Trilinos_INCLUDE_DIRS}
+                       ${Trilinos_TPL_INCLUDE_DIRS})
+ENDIF()
+
+include_directories (${ALBANY_PUMI_INCLUDE_DIRS}
                      ./
                      ./evaluators
                      ./evaluators/bc
@@ -663,6 +643,7 @@ include_directories (${Trilinos_INCLUDE_DIRS}
                      ./disc/stk
                      ./adapt
                      ./disc
+                     ./utility
                      ./LCM/
                      ./LCM/evaluators
                      ./LCM/evaluators/ACE
@@ -687,25 +668,12 @@ include_directories (${Trilinos_INCLUDE_DIRS}
                      ./LCM/solvers
                      ./LCM/utils
                      ./LCM/utils/topology
-                     ./FELIX/problems
-                     ./FELIX/evaluators
+                     ./LandIce/problems
+                     ./LandIce/evaluators
+                     ./Tsunami/problems
+                     ./Tsunami/evaluators
                      ./Aeras/problems
                      ./Aeras/evaluators
-                     ./Hydride/problems
-                     ./Hydride/evaluators
-         ./AFRL/
-         ./AFRL/problems
-         ./AFRL/evaluators
-         ./AFRL/communicators
-                     ./AMP/
-                     ./AMP/problems
-                     ./AMP/evaluators
-                     ./AMP/responses
-                     ./ANISO
-                     ./QCAD
-                     ./QCAD/problems
-                     ./QCAD/evaluators
-                     ./QCAD/responses
                      ./ATO
                      ./ATO/problems
                      ./ATO/evaluators
@@ -791,15 +759,6 @@ ELSE()
   set(Peridigm_LIBRARIES )
 ENDIF()
 
-# Albany CI (Configuration Interaction)
-IF(ALBANY_CI)
-  include_directories (${ALBANY_CI_INCLUDE_DIR})
-  link_directories (${ALBANY_CI_LIBRARY_DIR})
-  set(ALBANY_CI_LIB albanyCILib)
-ELSE()
-  set(ALBANY_CI_LIB )
-ENDIF()
-
 # RPI APF mesh interface
 IF(ALBANY_APF)
   SET(ALBANY_PUMI_INCLUDE_DIRS ./disc/pumi)
@@ -858,19 +817,6 @@ IF (ALBANY_DAKOTA)
   SET(ALBANY_EXECUTABLES ${ALBANY_EXECUTABLES} AlbanyDakotaT)
 ENDIF ()
 
-IF (ALBANY_MOR AND ALBANY_EPETRA)
-  IF (ALBANY_RBGEN)
-    add_executable(AlbanyRBGen MOR/Main_RBGen.cpp)
-    SET(ALBANY_EXECUTABLES ${ALBANY_EXECUTABLES} AlbanyRBGen)
-  ENDIF ()
-  IF (ALBANY_SEACAS)
-    add_executable(AlbanyMeshSample MOR/Main_MeshSample.cpp)
-    SET(ALBANY_EXECUTABLES ${ALBANY_EXECUTABLES} AlbanyMeshSample)
-  ENDIF ()
-  add_executable(AlbanyRomPostProcess MOR/Main_RomPostProcess.cpp)
-  SET(ALBANY_EXECUTABLES ${ALBANY_EXECUTABLES} AlbanyRomPostProcess)
-ENDIF ()
-
 IF (ALBANY_EPETRA)
 add_executable(AlbanyAnalysis Main_Analysis.cpp)
 SET(ALBANY_EXECUTABLES ${ALBANY_EXECUTABLES} AlbanyAnalysis)
@@ -910,7 +856,7 @@ set(ALL_LIBRARIES
 add_subdirectory(adapt)
 add_subdirectory(disc)
 
-IF(ALBANY_HAVE_STK)
+IF(ALBANY_STK)
 SET(ALBANY_LIBRARIES albanyLib albanyAdapt albanySTK)
 ELSE()
 SET(ALBANY_LIBRARIES albanyLib albanyAdapt)
@@ -921,19 +867,9 @@ IF(ALBANY_DEMO_PDES)
   SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} albanyPDEs)
 ENDIF()
 
-IF (ALBANY_MOR AND ALBANY_EPETRA)
-  add_subdirectory(MOR)
-  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} MOR)
-ENDIF()
-
-IF (ALBANY_QCAD)
-  add_subdirectory(QCAD)
-  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} QCAD)
-ENDIF()
-
-IF (ALBANY_FELIX)
-  add_subdirectory(FELIX)
-  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} FELIX)
+IF (ALBANY_LANDICE)
+  add_subdirectory(LandIce)
+  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} LandIce)
 
   IF (ENABLE_MPAS_INTERFACE)
     SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} mpasInterface)
@@ -953,24 +889,14 @@ IF (ALBANY_AERAS)
   SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} Aeras)
 ENDIF()
 
+IF (ALBANY_TSUNAMI)
+  add_subdirectory(Tsunami)
+  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} Tsunami)
+ENDIF()
+
 # RPI APF mesh interface
 IF(ALBANY_APF)
   SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} albanyPUMI)
-ENDIF()
-
-IF (ALBANY_AFRL)
-  add_subdirectory(AFRL)
-  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} AFRL)
-ENDIF()
-
-IF (ALBANY_AMP)
-  add_subdirectory(AMP)
-  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} AMP)
-ENDIF()
-
-IF (ALBANY_ANISO)
-  add_subdirectory(ANISO)
-  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ANISO)
 ENDIF()
 
 IF(ALBANY_CATALYST)
@@ -983,16 +909,6 @@ IF (ALBANY_ATO)
     SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ATO)
     # iso library uses stk
     SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ${ISOLIB_LIB})
-ENDIF()
-
-IF (ALBANY_HYDRIDE)
-  # Hydride requires LCM. However, LCM builds several excecutables. If shared
-  # libraries are used, then all symbols must be defined. Hence
-  # add_subdirectory(Hydride) must be called before, not after,
-  # add_subdirectory(LCM) so that LCM/CMakeLists.txt knows about the Hydride
-  # shared lib.
-  add_subdirectory(Hydride)
-  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} hydride)
 ENDIF()
 
 IF (ALBANY_LCM)
@@ -1009,10 +925,6 @@ endif()
 
 # Repeat libraries twice to catch circular dependencies
 SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ${ALBANY_LIBRARIES} ${ALBANY_LIBRARIES})
-
-IF (ALBANY_CTM)
-  add_subdirectory(CTM)
-ENDIF()
 
 MESSAGE("-- Albany Executables to link: ${ALBANY_EXECUTABLES}")
 
@@ -1032,6 +944,8 @@ IF (INSTALL_ALBANY)
     INSTALL_DESTINATION ${LIB_INSTALL_DIR}/Albany/cmake
     PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR)
   install(FILES ${HEADERS}
+    DESTINATION ${INCLUDE_INSTALL_DIR})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Albany_config.h
     DESTINATION ${INCLUDE_INSTALL_DIR})
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/AlbanyConfig.cmake
     DESTINATION ${LIB_INSTALL_DIR}/Albany/cmake )

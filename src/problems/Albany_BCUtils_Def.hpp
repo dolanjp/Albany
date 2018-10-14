@@ -161,7 +161,10 @@ Albany::BCUtils<Albany::DirichletTraits>::constructBCEvaluators(
   using PHX::MDALayout;
   using PHAL::AlbanyTraits;
 
-  use_sdbcs_ = false; 
+  use_sdbcs_ = false;
+  nodeSetIDs_.resize(nodeSetIDs.size()); 
+  for (int i=0; i<nodeSetIDs.size(); i++) 
+    nodeSetIDs_[i] = nodeSetIDs[i]; 
 
   if (!haveBCSpecified(
           params)) {  // If the BC sublist is not in the input file,
@@ -411,8 +414,6 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
     }
   }
 
-#if defined(ALBANY_LCM)
-
   ///
   /// Time dependent BC specific
   ///
@@ -501,6 +502,7 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
         p->set<RCP<DataLayout>>("Data Layout", dummy);
         p->set<string>("Dirichlet Name", ss);
         p->set<RealType>("Dirichlet Value", 0.0);
+        p->set<RealType>("SDBC Scaling", sub_list.get<RealType>("SDBC Scaling", 1.0));
         p->set<int>("Equation Offset", j);
         offsets_[i].push_back(j);
         p->set<RCP<ParamLib>>("Parameter Library", paramLib);
@@ -517,6 +519,7 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
     }
   }
 
+#ifdef ALBANY_LCM
   ///
   /// Torsion BC specific
   ////
@@ -675,6 +678,38 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
       }
     }
   }
+  ///
+  /// Scaled SDBC (S = "Symmetric", f.k.a. "Strong")
+  ///
+  for (std::size_t i = 0; i < nodeSetIDs.size(); i++) {
+    for (std::size_t j = 0; j < bcNames.size(); j++) {
+      string ss =
+          traits_type::constructScaledSDBCName(nodeSetIDs[i], bcNames[j]);
+      if (BCparams.isParameter(ss)) {
+        RCP<ParameterList> p = rcp(new ParameterList);
+        use_sdbcs_ = true; 
+        p->set<int>("Type", traits_type::typeSt);
+        p->set<RCP<DataLayout>>("Data Layout", dummy);
+        p->set<string>("Dirichlet Name", ss);
+        Teuchos::Array<RealType> array = BCparams.get<Teuchos::Array<RealType>>(ss);
+        p->set<RealType>("Dirichlet Value", array[0]);
+        if (array.size() > 1) {
+          p->set<RealType>("SDBC Scaling", array[1]);
+        }
+        else {
+          p->set<RealType>("SDBC Scaling", 1.0);
+        }
+        p->set<string>("Node Set ID", nodeSetIDs[i]);
+        p->set<int>("Equation Offset", j);
+        offsets_[i].push_back(j);
+        p->set<RCP<ParamLib>>("Parameter Library", paramLib);
+
+        evaluators_to_build[evaluatorsToBuildName(ss)] = p;
+
+        bcs->push_back(ss);
+      }
+    }
+  }
 
 #if defined(ALBANY_LCM)
   ///
@@ -761,6 +796,7 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
         p->set<RCP<DataLayout>>("Data Layout", dummy);
         p->set<string>("Dirichlet Name", ss);
         p->set<RealType>("Dirichlet Value", 0.0);
+        p->set<RealType>("SDBC Scaling", sub_list.get<RealType>("SDBC Scaling", 1.0));
         p->set<string>("Node Set ID", nodeSetIDs[i]);
         p->set<int>("Equation Offset", 0);
         for (std::size_t j = 0; j < bcNames.size(); j++) {
@@ -832,7 +868,6 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
   }
 
 #endif
-
   ///
   /// SideSet equations case: DBC to handle nodes not on the side set
   ///
@@ -924,6 +959,8 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
   using PHAL::AlbanyTraits;
   using std::string;
 
+  const bool enableMemoizer = params->get<bool>("Use MDField Memoization", false);
+
   // Drop into the "Neumann BCs" sublist
   ParameterList BCparams = params->sublist(traits_type::bcParamsPl);
   BCparams.validateParameters(
@@ -990,13 +1027,13 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
             else
               p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_scalar);
           }
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
           else if (conditions[k] == "basal") {
             Teuchos::ParameterList& mapParamList =
                 params->sublist("Stereographic Map");
             p->set<Teuchos::ParameterList*>("Stereographic Map", &mapParamList);
             Teuchos::ParameterList& physics_list =
-                params->sublist("FELIX Physical Parameters");
+                params->sublist("LandIce Physical Parameters");
             string betaName = BCparams.get("BetaXY", "Constant");
             double L = BCparams.get("L", 1.0);
             double rho = physics_list.get("Ice Density", 910.0);
@@ -1038,7 +1075,7 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
                 params->sublist("Stereographic Map");
             p->set<Teuchos::ParameterList*>("Stereographic Map", &mapParamList);
             Teuchos::ParameterList& physics_list =
-                params->sublist("FELIX Physical Parameters");
+                params->sublist("LandIce Physical Parameters");
             string betaName = BCparams.get("BetaXY", "Constant");
             double g = physics_list.get("Gravity Acceleration", 9.8);
             double rho = physics_list.get("Ice Density", 910.0);
@@ -1061,6 +1098,10 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
           p->set<Teuchos::Array<double>>(
               "Neumann Input Value", BCparams.get<Teuchos::Array<double>>(ss));
           p->set<string>("Neumann Input Conditions", conditions[k]);
+
+          // Enable Memoizer
+          if (enableMemoizer && conditions[k] == "lateral")
+            p->set<bool>("Enable Memoizer", enableMemoizer);
 
           // If we are doing a Neumann internal boundary with a "scaled jump"
           // (includes "robin" too)
@@ -1104,6 +1145,7 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
         string ss = traits_type::constructTimeDepBCName(
             meshSpecs->ssNames[i], bcNames[j], conditions[k]);
 
+        
         // Have a match of the line in input.xml
 
         if (BCparams.isSublist(ss)) {
@@ -1212,7 +1254,7 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
     evaluators_to_build[NeuGCV] = p;
   }
 
-#ifdef ALBANY_FELIX
+#ifdef ALBANY_LANDICE
   /*  // Build evaluator for basal_friction
    string NeuGBF="Evaluator for Gather basal_friction";
    {
@@ -1282,6 +1324,8 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
     p->set<string>("State Name", paramName);
     p->set<std::string>("Field Name", paramName);
 
+    if (enableMemoizer) p->set<bool>("Enable Memoizer", enableMemoizer);
+
     evaluators_to_build[NeuGT] = p;
   }
 
@@ -1294,6 +1338,8 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
     p->set<RCP<DataLayout>>("State Field Layout", dl->node_scalar);
     p->set<string>("State Name", "surface_height");
     p->set<string>("Field Name", "surface_height");
+
+    if (enableMemoizer) p->set<bool>("Enable Memoizer", enableMemoizer);
 
     evaluators_to_build[NeuGSH] = p;
   }
@@ -1389,10 +1435,16 @@ Albany::DirichletTraits::getValidBCParameters(
           nodeSetIDs[i], bcNames[j]);
       std::string st = Albany::DirichletTraits::constructSDBCName(
           nodeSetIDs[i], bcNames[j]);
+      std::string sst = Albany::DirichletTraits::constructScaledSDBCName(
+          nodeSetIDs[i], bcNames[j]);
       validPL->set<double>(
           ss, 0.0, "Value of BC corresponding to nodeSetID and dofName");
       validPL->set<double>(
           st, 0.0, "Value of SDBC corresponding to nodeSetID and dofName");
+      Teuchos::Array<double> array(1);
+      array[0] = 0.0; 
+      validPL->set<Teuchos::Array<double>>(
+          sst, array, "Value of Scaled SDBC corresponding to nodeSetID and dofName");
       validPL->sublist(
           tt, false, "SubList of BC corresponding to nodeSetID and dofName");
       validPL->sublist(
@@ -1402,6 +1454,8 @@ Albany::DirichletTraits::getValidBCParameters(
       ss = Albany::DirichletTraits::constructBCNameField(
           nodeSetIDs[i], bcNames[j]);
       st = Albany::DirichletTraits::constructSDBCNameField(
+          nodeSetIDs[i], bcNames[j]);
+      sst = Albany::DirichletTraits::constructScaledSDBCNameField(
           nodeSetIDs[i], bcNames[j]);
       validPL->set<std::string>(
           ss, "dirichlet field", "Field used to prescribe Dirichlet BCs");
@@ -1508,6 +1562,16 @@ Albany::DirichletTraits::constructSDBCName(
 }
 
 std::string
+Albany::DirichletTraits::constructScaledSDBCName(
+    const std::string& ns, const std::string& dof) {
+  std::stringstream ss;
+  ss << "Scaled SDBC on NS " << ns << " for DOF " << dof;
+
+  return ss.str();
+}
+
+
+std::string
 Albany::DirichletTraits::constructBCNameField(
     const std::string& ns, const std::string& dof) {
   std::stringstream ss;
@@ -1524,6 +1588,16 @@ Albany::DirichletTraits::constructSDBCNameField(
 
   return ss.str();
 }
+
+std::string
+Albany::DirichletTraits::constructScaledSDBCNameField(
+    const std::string& ns, const std::string& dof) {
+  std::stringstream ss;
+  ss << "Scaled SDBC on NS " << ns << " for DOF " << dof << " prescribe Field";
+
+  return ss.str();
+}
+
 
 std::string
 Albany::NeumannTraits::constructBCName(

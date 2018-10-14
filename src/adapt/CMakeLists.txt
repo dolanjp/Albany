@@ -34,7 +34,7 @@ SET(HEADERS
     AAdapt_RC_Projector_impl.hpp
    )
 
-IF(ALBANY_HAVE_STK)
+IF(ALBANY_STK)
   SET(SOURCES ${SOURCES}
     AAdapt_CopyRemeshT.cpp
   )
@@ -59,7 +59,7 @@ IF (ALBANY_EPETRA)
     AAdapt_AdaptiveModelFactory.hpp
     AAdapt_ThyraAdaptiveModelEvaluator.hpp
   )
-  IF(ALBANY_HAVE_STK)
+  IF(ALBANY_STK)
     SET(SOURCES ${SOURCES}
       AAdapt_CopyRemesh.cpp
     )
@@ -71,7 +71,7 @@ ENDIF()
 
 # Random Criterion & Stress Fracture depend on LCM
 # Speculative features and code, currently
-IF(ALBANY_LCM AND LCM_SPECULATIVE AND ALBANY_HAVE_STK)
+IF(ALBANY_LCM AND LCM_SPECULATIVE AND ALBANY_STK)
 
 SET(SOURCES ${SOURCES}
     AAdapt_RandomCriterion.cpp
@@ -94,7 +94,7 @@ ENDIF()
 ENDIF()
 
 # Topology Modification depends on LCM and STK
-IF(ALBANY_LCM AND ALBANY_HAVE_STK AND ALBANY_BGL)
+IF(ALBANY_LCM AND ALBANY_STK AND ALBANY_BGL)
 
 SET(SOURCES ${SOURCES}
     AAdapt_TopologyModificationT.cpp
@@ -117,7 +117,7 @@ ENDIF()
 
 ENDIF()
 
-IF(ALBANY_LCM AND ALBANY_STK_PERCEPT AND ALBANY_HAVE_STK)
+IF(ALBANY_LCM AND ALBANY_STK_PERCEPT AND ALBANY_STK)
 
 SET(SOURCES ${SOURCES}
     AAdapt_STKAdaptT.cpp
@@ -177,19 +177,13 @@ include_directories(${ALBANY_PUMI_INCLUDE_DIRS} ${PUMI_INCLUDE_DIR})
 
 ENDIF()
 
-IF(ALBANY_AMP)
-SET(SOURCES ${SOURCES} AAdapt_SimAdapt.cpp AAdapt_SimLayerAdapt.cpp)
-SET(HEADERS ${HEADERS} AAdapt_SimAdapt.hpp AAdapt_SimLayerAdapt.hpp)
-include_directories(${ALBANY_PUMI_INCLUDE_DIRS})
-ENDIF()
-
 include_directories(${Trilinos_INCLUDE_DIRS}  ${Trilinos_TPL_INCLUDE_DIRS}
                     ${Albany_SOURCE_DIR} / src ${Albany_SOURCE_DIR} / src / evaluators
                     ${Albany_SOURCE_DIR} / src / problems ${Albany_SOURCE_DIR} / src / responses
                     ${Albany_SOURCE_DIR} / src / disc
+                    ${Albany_SOURCE_DIR} / src / utility 
                     ${Albany_SOURCE_DIR} / src / disc / stk ${Albany_SOURCE_DIR} / src / LCM /
                     ${Albany_SOURCE_DIR} / src / LCM / evaluators ${Albany_SOURCE_DIR} / src / LCM / utils
-                    ${Albany_SOURCE_DIR}/src/AMP/responses
                    )
 
 add_library(albanyAdapt ${Albany_LIBRARY_TYPE} ${SOURCES} ${HEADERS})

@@ -56,15 +56,30 @@ struct FlowParameterBase
     return flow_params_[index_param];
   }
 
+  void
+  setMaxIncrement(const RealType& max_incr)
+  {
+    max_incr_ = max_incr;
+  }
+
   virtual
   void
   setTolerance() = 0;
+
+  virtual
+  ~FlowParameterBase()
+  {
+    return;
+  }
 
   RealType
   min_tol_{TINY};
 
   RealType
   max_tol_{HUGE_};
+
+  RealType
+  max_incr_{LOG_HUGE};
 
   std::map<std::string, ParamIndex>
   param_map_;

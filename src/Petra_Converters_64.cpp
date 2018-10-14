@@ -13,30 +13,15 @@
 #include "Teuchos_OrdinalTraits.hpp"
 #include "Teuchos_TestForException.hpp"
 
+#include "EpetraExt_BlockMapOut.h"
+
 #include <cstddef>
 #include <stdexcept>
 #include <ostream>
 
-template<class LocalOrdinal , class GlobalOrdinal , class Node >
-Teuchos::RCP< const Tpetra_Map> Petra::createMapWithNode(const int & 	numElements,
-                                                  const Teuchos::Array< GlobalOrdinal > & 	elementList,
-                                                  const Teuchos::RCP< const Teuchos::Comm< int > > & 	 comm,
-                                                  const Teuchos::RCP< Node > & 	 node)
-{
-  bool isDist = (numElements != elementList.size());
-  if (isDist)
-  {
-    return Tpetra::createNonContigMapWithNode<LocalOrdinal, GlobalOrdinal, Node> (elementList, comm, node);
-  }
-  else
-  {
-    return Tpetra::createLocalMapWithNode<LocalOrdinal, GlobalOrdinal, Node> (numElements, comm, node);
-  }
-}
-
 //TpetraMap_To_EpetraMap: takes in Tpetra::Map object, converts it to its equivalent Epetra_Map object,
 //and returns an RCP pointer to this Epetra_Map
-Teuchos::RCP<Epetra_Map> Petra::TpetraMap_To_EpetraMap(const Teuchos::RCP<const Tpetra_Map>& tpetraMap_,
+Teuchos::RCP<const Epetra_Map> Petra::TpetraMap_To_EpetraMap(const Teuchos::RCP<const Tpetra_Map>& tpetraMap_,
                                                       const Teuchos::RCP<const Epetra_Comm>& comm_)
 {
   const int numElements = Teuchos::as<int>(tpetraMap_->getNodeNumElements());
@@ -56,8 +41,7 @@ Teuchos::RCP<Epetra_Map> Petra::TpetraMap_To_EpetraMap(const Teuchos::RCP<const 
 //EpetraMap_To_TpetraMap: takes in Epetra_Map object, converts it to its equivalent Tpetra::Map object,
 //and returns an RCP pointer to this Tpetra::Map
 Teuchos::RCP<const Tpetra_Map> Petra::EpetraMap_To_TpetraMap(const Teuchos::RCP<const Epetra_Map>& epetraMap_,
-                                                      const Teuchos::RCP<const Teuchos::Comm<int> >& commT_,
-                                                      const Teuchos::RCP<KokkosNode>& nodeT_)
+                                                      const Teuchos::RCP<const Teuchos::Comm<int> >& commT_)
 {
   const std::size_t numElements = Teuchos::as<std::size_t>(epetraMap_->NumMyElements());
   const auto indexBase = Teuchos::as<GO>(epetraMap_->IndexBase());
@@ -67,9 +51,47 @@ Teuchos::RCP<const Tpetra_Map> Petra::EpetraMap_To_TpetraMap(const Teuchos::RCP<
     for(LO i=0; i < numElements; i++)
        indices[i] = epetra_indices[i];
     const Tpetra::global_size_t computeGlobalElements = Teuchos::OrdinalTraits<Tpetra::global_size_t>::invalid();
-    return Teuchos::rcp(new Tpetra_Map(computeGlobalElements, indices, indexBase, commT_, nodeT_));
+    return Teuchos::rcp(new Tpetra_Map(computeGlobalElements, indices, indexBase, commT_));
   } else {
-    return Teuchos::rcp(new Tpetra_Map(numElements, indexBase, commT_, Tpetra::LocallyReplicated, nodeT_));
+    return Teuchos::rcp(new Tpetra_Map(numElements, indexBase, commT_, Tpetra::LocallyReplicated));
+  }
+}
+
+//EpetraMap_To_TpetraMap: takes in Epetra_Map object, converts it to its equivalent Tpetra::Map object,
+//and returns an RCP pointer to this Tpetra::Map
+Teuchos::RCP<const Tpetra_Map> Petra::EpetraMap_To_TpetraMap(const Epetra_Map& epetraMap_,
+                                                      const Teuchos::RCP<const Teuchos::Comm<int> >& commT_)
+{
+  const std::size_t numElements = Teuchos::as<std::size_t>(epetraMap_.NumMyElements());
+  const auto indexBase = Teuchos::as<GO>(epetraMap_.IndexBase());
+  if (epetraMap_.DistributedGlobal() || epetraMap_.Comm().NumProc() == Teuchos::OrdinalTraits<int>::one()) {
+    Teuchos::Array<Tpetra_GO> indices(numElements);
+    int *epetra_indices = epetraMap_.MyGlobalElements();
+    for(LO i=0; i < numElements; i++)
+       indices[i] = epetra_indices[i];
+    const Tpetra::global_size_t computeGlobalElements = Teuchos::OrdinalTraits<Tpetra::global_size_t>::invalid();
+    return Teuchos::rcp(new Tpetra_Map(computeGlobalElements, indices, indexBase, commT_));
+  } else {
+    return Teuchos::rcp(new Tpetra_Map(numElements, indexBase, commT_, Tpetra::LocallyReplicated));
+  }
+}
+
+//EpetraMap_To_TpetraMap: takes in Epetra_Map object, converts it to its equivalent Tpetra::Map object,
+//and returns an RCP pointer to this Tpetra::Map
+Teuchos::RCP<const Tpetra_Map> Petra::EpetraMap_To_TpetraMap(const Epetra_BlockMap& epetraMap_,
+                                                      const Teuchos::RCP<const Teuchos::Comm<int> >& commT_)
+{
+  const std::size_t numElements = Teuchos::as<std::size_t>(epetraMap_.NumMyElements());
+  const auto indexBase = Teuchos::as<GO>(epetraMap_.IndexBase());
+  if (epetraMap_.DistributedGlobal() || epetraMap_.Comm().NumProc() == Teuchos::OrdinalTraits<int>::one()) {
+    Teuchos::Array<Tpetra_GO> indices(numElements);
+    int *epetra_indices = epetraMap_.MyGlobalElements();
+    for(LO i=0; i < numElements; i++)
+       indices[i] = epetra_indices[i];
+    const Tpetra::global_size_t computeGlobalElements = Teuchos::OrdinalTraits<Tpetra::global_size_t>::invalid();
+    return Teuchos::rcp(new Tpetra_Map(computeGlobalElements, indices, indexBase, commT_));
+  } else {
+    return Teuchos::rcp(new Tpetra_Map(numElements, indexBase, commT_, Tpetra::LocallyReplicated));
   }
 }
 
@@ -128,9 +150,14 @@ void Petra::TpetraCrsMatrix_To_EpetraCrsMatrix(const Teuchos::RCP<Tpetra_CrsMatr
   //check if row maps of epetraCrsMatrix_ and tpetraCrsMatrix_ are the same
   const Epetra_BlockMap epetraRowMap_ = epetraCrsMatrix_.RowMap();
   Teuchos::RCP<const Tpetra_Map> tpetraRowMap_ = tpetraCrsMatrix_->getRowMap();
-  Teuchos::RCP<Epetra_Map> tpetraRowMapE_ = TpetraMap_To_EpetraMap(tpetraRowMap_, comm_);
+  Teuchos::RCP<const Epetra_Map> tpetraRowMapE_ = TpetraMap_To_EpetraMap(tpetraRowMap_, comm_);
   bool isRowSame = tpetraRowMapE_->SameAs(epetraRowMap_);
   //if epetraCrsMatrix_ and tpetraCrsMatrix_ do not have the same row map, throw an exception
+  if (isRowSame != true)
+  {
+    EpetraExt::BlockMapToMatrixMarketFile("epetraRowMap.mm", epetraRowMap_);
+    EpetraExt::BlockMapToMatrixMarketFile("tpetraRowMapE.mm", *tpetraRowMapE_);
+  }
   TEUCHOS_TEST_FOR_EXCEPTION((isRowSame != true),
                              std::logic_error,
                              "Error in Petra::TpetraCrsMatrix_To_EpetraCrsMatrix! Arguments Epetra_CrsMatrix and Tpetra::CrsMatrix do not have same row map." <<  std::endl) ;
@@ -138,7 +165,7 @@ void Petra::TpetraCrsMatrix_To_EpetraCrsMatrix(const Teuchos::RCP<Tpetra_CrsMatr
  //check if column maps of epetraCrsMatrix_ and tpetraCrsMatrix_ are the same
  const Epetra_BlockMap epetraColMap_ = epetraCrsMatrix_.ColMap();
  Teuchos::RCP<const Tpetra_Map> tpetraColMap_ = tpetraCrsMatrix_->getColMap();
- Teuchos::RCP<Epetra_Map> tpetraColMapE_ = TpetraMap_To_EpetraMap(tpetraColMap_, comm_);
+ Teuchos::RCP<const Epetra_Map> tpetraColMapE_ = TpetraMap_To_EpetraMap(tpetraColMap_, comm_);
  bool isColSame = tpetraColMapE_->SameAs(epetraColMap_);
  //if epetraCrsMatrix_ and tpetraCrsMatrix_ do not have the same column map, throw an exception
  TEUCHOS_TEST_FOR_EXCEPTION((isColSame != true),
@@ -184,7 +211,7 @@ void Petra::TpetraVector_To_EpetraVector(const Teuchos::RCP<const Tpetra_Vector>
   if(Teuchos::is_null(epetraVector_)){
 
     Teuchos::RCP<const Tpetra_Map> tpetraMap = tpetraVector_->getMap();
-    Teuchos::RCP<Epetra_Map> emap = TpetraMap_To_EpetraMap(tpetraMap, comm_);
+    Teuchos::RCP<const Epetra_Map> emap = TpetraMap_To_EpetraMap(tpetraMap, comm_);
     epetraVector_ = Teuchos::rcp(new Epetra_Vector(*emap));
 
   }
@@ -217,17 +244,10 @@ void Petra::TpetraMultiVector_To_EpetraMultiVector(const Teuchos::RCP<const Tpet
 
 //EpetraVector_To_TpetraVectorConst: copies Epetra_Vector to const Tpetra_Vector
 Teuchos::RCP<const Tpetra_Vector> Petra::EpetraVector_To_TpetraVectorConst(const Epetra_Vector& epetraVector_,
-                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_,
-                                                               const Teuchos::RCP<KokkosNode>& nodeT_)
+                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_)
 {
-  auto numElements = epetraVector_.Map().NumMyElements();
-  auto numGlobalElements = epetraVector_.Map().NumGlobalElements();
-  int *epetra_indices = epetraVector_.Map().MyGlobalElements();
-  Teuchos::Array<Tpetra_GO> indices(numElements);
-  for(LO i=0; i < numElements; i++)
-     indices[i] = epetra_indices[i];
-  //auto mapT = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode> (indices, commT_, nodeT_);
-  auto mapT = createMapWithNode<LO, Tpetra_GO, KokkosNode> (numGlobalElements, indices, commT_, nodeT_);
+  //get map from epetraVector_ and convert to Tpetra::Map
+  auto mapT = EpetraMap_To_TpetraMap(epetraVector_.Map(), commT_);
   ST *values;
   epetraVector_.ExtractView(&values);
   Teuchos::ArrayView<ST> valuesAV = Teuchos::arrayView(values, mapT->getGlobalNumElements());
@@ -237,19 +257,10 @@ Teuchos::RCP<const Tpetra_Vector> Petra::EpetraVector_To_TpetraVectorConst(const
 
 //EpetraMultiVector_To_TpetraMultiVector: copies Epetra_MultiVector to non-const Tpetra_MultiVector
 Teuchos::RCP<Tpetra_MultiVector> Petra::EpetraMultiVector_To_TpetraMultiVector(const Epetra_MultiVector& epetraMV_,
-                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_,
-                                                               const Teuchos::RCP<KokkosNode>& nodeT_)
+                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_)
 {
   //get map from epetraMV_ and convert to Tpetra::Map
-  auto numElements = epetraMV_.Map().NumMyElements();
-  auto numGlobalElements = epetraMV_.Map().NumGlobalElements();
-  int *epetra_indices = epetraMV_.Map().MyGlobalElements();
-  Teuchos::Array<Tpetra_GO> indices(numElements);
-  for(LO i=0; i < numElements; i++)
-     indices[i] = epetra_indices[i];
-
-  //const Teuchos::RCP<const Tpetra_Map> mapT = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode> (indices, commT_, nodeT_);
-  auto mapT = createMapWithNode<LO, Tpetra_GO, KokkosNode> (numGlobalElements, indices, commT_, nodeT_);
+  auto mapT = EpetraMap_To_TpetraMap(epetraMV_.Map(), commT_);
   //copy values from epetraMV_
   int numVectors = epetraMV_.NumVectors();
   int Length;
@@ -264,17 +275,10 @@ Teuchos::RCP<Tpetra_MultiVector> Petra::EpetraMultiVector_To_TpetraMultiVector(c
 
 //EpetraVector_To_TpetraVectorNonConst: copies Epetra_Vector to non-const Tpetra_Vector
 Teuchos::RCP<Tpetra_Vector> Petra::EpetraVector_To_TpetraVectorNonConst(const Epetra_Vector& epetraVector_,
-                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_,
-                                                               const Teuchos::RCP<KokkosNode>& nodeT_)
+                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_)
 {
-  auto numElements = epetraVector_.Map().NumMyElements();
-  auto numGlobalElements = epetraVector_.Map().NumGlobalElements();
-  int *epetra_indices = epetraVector_.Map().MyGlobalElements();
-  Teuchos::Array<Tpetra_GO> indices(numElements);
-  for(LO i=0; i < numElements; i++)
-     indices[i] = epetra_indices[i];
-  //Teuchos::RCP<const Tpetra_Map> mapT = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode> (indices, commT_, nodeT_);
-  auto mapT = createMapWithNode<LO, Tpetra_GO, KokkosNode> (numGlobalElements, indices, commT_, nodeT_);
+  //get map from epetraVector_ and convert to Tpetra::Map
+  auto mapT = EpetraMap_To_TpetraMap(epetraVector_.Map(), commT_);
   ST *values;
   epetraVector_.ExtractView(&values);
   Teuchos::ArrayView<ST> valuesAV = Teuchos::arrayView(values, mapT->getGlobalNumElements());
@@ -284,32 +288,13 @@ Teuchos::RCP<Tpetra_Vector> Petra::EpetraVector_To_TpetraVectorNonConst(const Ep
 
 //EpetraCrsMatrix_To_TpetraCrsMatrix: copies Epetra_CrsMatrix to its analogous Tpetra_CrsMatrix
 Teuchos::RCP<Tpetra_CrsMatrix> Petra::EpetraCrsMatrix_To_TpetraCrsMatrix(Epetra_CrsMatrix& epetraCrsMatrix_,
-                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_,
-                                                               const Teuchos::RCP<KokkosNode>& nodeT_)
+                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_)
 {
   //get row map of Epetra::CrsMatrix & convert to Tpetra::Map
-  auto epetraRowMap_ = epetraCrsMatrix_.RowMap();
-  auto numRowElements = epetraRowMap_.NumMyElements();
-  auto numGlobalRowElements = epetraRowMap_.NumGlobalElements();
-  int *epetra_rowIndices = epetraRowMap_.MyGlobalElements();
-  Teuchos::Array<Tpetra_GO> rowIndices(numRowElements);
-  for(LO i=0; i < numRowElements; i++){
-     rowIndices[i] = epetra_rowIndices[i];
-  }
-  //auto tpetraRowMap_ = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode> (rowIndices, commT_, nodeT_);
-  auto tpetraRowMap_ = createMapWithNode<LO, Tpetra_GO, KokkosNode> (numGlobalRowElements, rowIndices, commT_, nodeT_);
+  auto tpetraRowMap_ = EpetraMap_To_TpetraMap(epetraCrsMatrix_.RowMap(), commT_);
 
   //get col map of Epetra::CrsMatrix & convert to Tpetra::Map
-  auto epetraColMap_ = epetraCrsMatrix_.ColMap();
-  auto numColElements = epetraColMap_.NumMyElements();
-  auto numGlobalColElements = epetraColMap_.NumGlobalElements();
-  int *epetra_colIndices = epetraColMap_.MyGlobalElements();
-  Teuchos::Array<Tpetra_GO> colIndices(numColElements);
-  for(LO i=0; i < numColElements; i++){
-     colIndices[i] = epetra_colIndices[i];
-  }
-  //auto tpetraColMap_ = Tpetra::createNonContigMapWithNode<LO, Tpetra_GO, KokkosNode> (colIndices, commT_, nodeT_);
-  auto tpetraColMap_ = createMapWithNode<LO, Tpetra_GO, KokkosNode> (numGlobalColElements, colIndices, commT_, nodeT_);
+  auto tpetraColMap_ = EpetraMap_To_TpetraMap(epetraCrsMatrix_.ColMap(), commT_);
 
   //get CrsGraph of Epetra::CrsMatrix & convert to Tpetra::CrsGraph
   const Epetra_CrsGraph epetraCrsGraph_ = epetraCrsMatrix_.Graph();

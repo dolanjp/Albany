@@ -4,17 +4,17 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
+#include "Albany_config.h"
+
 #include <Teuchos_AbstractFactoryStd.hpp>
 #include <Teuchos_TestForException.hpp>
 #include <fstream>
 
-#include <Thyra_LinearOpWithSolveBase.hpp>
-#include <Thyra_TpetraLinearOp.hpp>
-#include <Thyra_TpetraMultiVector.hpp>
-#include <Thyra_VectorBase.hpp>
 #ifdef ALBANY_IFPACK2
 #include <Thyra_Ifpack2PreconditionerFactory.hpp>
 #endif
+
+#include <Phalanx_DataLayout_MDALayout.hpp>
 
 #include <Intrepid2_CellTools.hpp>
 #include <Intrepid2_DefaultCubatureFactory.hpp>
@@ -27,7 +27,8 @@
 
 namespace LCM {
 
-class ProjectIPtoNodalFieldManager : public Adapt::NodalDataBase::Manager {
+class ProjectIPtoNodalFieldManager : public Adapt::NodalDataBase::Manager
+{
  public:
   // Declare a class hierarchy of mass matrix types. mass_matrix has to be in
   // this specialization, at least for now, because its implementation of fill()
@@ -77,7 +78,8 @@ class ProjectIPtoNodalFieldManager : public Adapt::NodalDataBase::Manager {
 
 typedef Intrepid2::Basis<PHX::Device, RealType, RealType> Intrepid2Basis;
 
-class ProjectIPtoNodalFieldQuadrature {
+class ProjectIPtoNodalFieldQuadrature
+{
   typedef PHAL::AlbanyTraits::Residual::MeshScalarT      MeshScalarT;
   PHX::MDField<RealType, Cell, Node, QuadPoint>          bf_;
   PHX::MDField<const RealType, Cell, Node, QuadPoint>    bf_const_;
@@ -323,7 +325,8 @@ struct EMassMatrixType
 };
 }  // namespace
 
-class ProjectIPtoNodalFieldManager::MassMatrix {
+class ProjectIPtoNodalFieldManager::MassMatrix
+{
  public:
   virtual ~MassMatrix() {}
 
@@ -347,7 +350,8 @@ class ProjectIPtoNodalFieldManager::MassMatrix {
 };
 
 class ProjectIPtoNodalFieldManager::FullMassMatrix
-    : public ProjectIPtoNodalFieldManager::MassMatrix {
+    : public ProjectIPtoNodalFieldManager::MassMatrix
+{
  public:
   virtual void
   fill(
@@ -390,7 +394,8 @@ class ProjectIPtoNodalFieldManager::FullMassMatrix
 };
 
 class ProjectIPtoNodalFieldManager::LumpedMassMatrix
-    : public ProjectIPtoNodalFieldManager::MassMatrix {
+    : public ProjectIPtoNodalFieldManager::MassMatrix
+{
  public:
   virtual void
   fill(
@@ -428,6 +433,7 @@ ProjectIPtoNodalFieldManager::MassMatrix::create(EMassMatrixType::Enum type)
     case EMassMatrixType::full: return new FullMassMatrix();
     case EMassMatrixType::lumped: return new LumpedMassMatrix();
   }
+  return nullptr;
 }
 
 template <typename Traits>

@@ -90,16 +90,16 @@ CrystalPlasticityKernel(
     read_orientations_from_mesh_ = false;
     // TODO check if basis is given else default
     // NOTE default to coordinate axes; construct 3rd direction if only 2 given
-    element_block_orientation_.set_dimension(num_dims_);
-    for (int i = 0; i < num_dims_; ++i) {
+    element_block_orientation_.set_dimension(CP::MAX_DIM);
+    for (int i = 0; i < CP::MAX_DIM; ++i) {
       std::vector<RealType> const
       b_temp = e_list.get<Teuchos::Array<RealType>>(
         Albany::strint("Basis Vector", i + 1)).toVector();
 
       minitensor::Vector<RealType, CP::MAX_DIM>
-      basis(num_dims_);
+      basis(CP::MAX_DIM);
 
-      for (int dim = 0; dim < num_dims_; ++dim){
+      for (int dim = 0; dim < CP::MAX_DIM; ++dim){
         basis[dim] = b_temp[dim];
       }
 
@@ -108,7 +108,7 @@ CrystalPlasticityKernel(
       // TODO check zero, rh system
       // Filling columns of transformation with basis vectors
       // We are forming R^{T} which is equivalent to the direction cosine matrix
-      for (int j = 0; j < num_dims_; ++j) {
+      for (int j = 0; j < CP::MAX_DIM; ++j) {
         element_block_orientation_(j, i) = basis[j];
       }
     }
@@ -122,6 +122,11 @@ CrystalPlasticityKernel(
 	minimizer_ = preader.getMinimizer();
 	rol_minimizer_ = preader.getRolMinimizer();
   predictor_slip_ = preader.getPredictorSlip();
+						   
+  // ensure minimizer abs tolerance isn't too low
+  ALBANY_ASSERT(minimizer_.abs_tol >= CP::MIN_TOL,
+		"Specified absolute tolerance is too tight:"
+		" minimum tolerance: 1.0e-14");
 
   if (verbosity_ >= CP::Verbosity::HIGH) {
     std::cout << "Slip predictor: " << int(predictor_slip_) << std::endl;
@@ -150,7 +155,7 @@ CrystalPlasticityKernel(
   c44_temperature_coeff_ = e_list.get<RealType>("M44", NAN);
   reference_temperature_ = e_list.get<RealType>("Reference Temperature", NAN);
 
-  C_unrotated_.set_dimension(num_dims_);
+  C_unrotated_.set_dimension(CP::MAX_DIM);
   if (c11_ == c33_) {
     c66_ = c44_;
     c66_temperature_coeff_ = c44_temperature_coeff_;
@@ -206,13 +211,13 @@ CrystalPlasticityKernel(
     s_temp = ss_list.get<Teuchos::Array<RealType>>("Slip Direction").toVector();
 
     minitensor::Vector<RealType, CP::MAX_DIM>
-    s_temp_normalized(num_dims_);
+    s_temp_normalized(CP::MAX_DIM);
 
-    for (int i = 0; i < num_dims_; ++i) {
+    for (int i = 0; i < CP::MAX_DIM; ++i) {
       s_temp_normalized[i] = s_temp[i];
     }
     s_temp_normalized = minitensor::unit(s_temp_normalized);
-    slip_systems_.at(num_ss).s_.set_dimension(num_dims_);
+    slip_systems_.at(num_ss).s_.set_dimension(CP::MAX_DIM);
     slip_systems_.at(num_ss).s_ = s_temp_normalized;
 
     //
@@ -222,17 +227,17 @@ CrystalPlasticityKernel(
     n_temp = ss_list.get<Teuchos::Array<RealType>>("Slip Normal").toVector();
 
     minitensor::Vector<RealType, CP::MAX_DIM>
-    n_temp_normalized(num_dims_);
+    n_temp_normalized(CP::MAX_DIM);
 
-    for (int i = 0; i < num_dims_; ++i) {
+    for (int i = 0; i < CP::MAX_DIM; ++i) {
       n_temp_normalized[i] = n_temp[i];
     }
 
     n_temp_normalized = minitensor::unit(n_temp_normalized);
-    slip_systems_.at(num_ss).n_.set_dimension(num_dims_);
+    slip_systems_.at(num_ss).n_.set_dimension(CP::MAX_DIM);
     slip_systems_.at(num_ss).n_ = n_temp_normalized;
 
-    slip_systems_.at(num_ss).projector_.set_dimension(num_dims_);
+    slip_systems_.at(num_ss).projector_.set_dimension(CP::MAX_DIM);
     slip_systems_.at(num_ss).projector_ =
       minitensor::dyad(slip_systems_.at(num_ss).s_, slip_systems_.at(num_ss).n_);
 
@@ -252,6 +257,9 @@ CrystalPlasticityKernel(
   {
     auto &
     slip_family = slip_families_[sf_index];
+
+    // Set the saturated hardness value, if applicable
+    slip_family.phardening_parameters_->setValueAsymptotic();
 
     // Create latent matrix for hardening law
     slip_family.phardening_parameters_->createLatentMatrix(
@@ -429,8 +437,8 @@ void CrystalPlasticityKernel<EvalT, Traits>::init(
     index_element_ = -1;
   }
 
-  if(verbosity_ >= CP::Verbosity::HIGH) {
-    std::cout << ">>> in cp initialize compute state\n";
+  if(verbosity_ >= CP::Verbosity::MEDIUM) {
+    std::cout << ">>> kernel::init\n";
   }
 
   if (read_orientations_from_mesh_)
@@ -497,6 +505,10 @@ template<typename EvalT, typename Traits>
 KOKKOS_INLINE_FUNCTION void
 CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
 {
+  if(verbosity_ >= CP::Verbosity::MEDIUM) {
+    std::cout << ">>> in kernel::operator\n";
+    std::cout << "    cell: " << cell << " point: " << pt << "\n";
+  }
   // If a previous constitutive calculation has failed, exit immediately.
   if (nox_status_test_->status_ == NOX::StatusTest::Failed) {
     if (verbosity_ == CP::Verbosity::DEBUG) {
@@ -562,13 +574,13 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
   C_unrotated = C_unrotated_;
 
   minitensor::Tensor4<ScalarT, CP::MAX_DIM>
-  C(num_dims_);
+  C(CP::MAX_DIM);
 
   RealType
   norm_slip_residual;
 
   minitensor::Tensor<RealType, CP::MAX_DIM>
-  orientation_matrix(num_dims_);
+  orientation_matrix(CP::MAX_DIM);
 
   std::vector<CP::SlipSystem<CP::MAX_DIM>>
   element_slip_systems = slip_systems_;
@@ -608,9 +620,9 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
   }
 
   if (read_orientations_from_mesh_) {
-    for (int i = 0; i < 3; ++i) {
-      for (int j = 0; j < 3; ++j) {
-        orientation_matrix(i,j) = rotation_matrix_transpose_[cell][i * 3 + j];
+    for (int i = 0; i < CP::MAX_DIM; ++i) {
+      for (int j = 0; j < CP::MAX_DIM; ++j) {
+        orientation_matrix(i,j) = rotation_matrix_transpose_[cell][i * CP::MAX_DIM + j];
       }
     }
   }
@@ -640,19 +652,36 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
     }
   }
 
+  if (verbosity_ == CP::Verbosity::DEBUG)
+  {
+    std::cout << "F_n" << std::endl;
+    std::cout << std::setprecision(4) << F_n << std::endl;
+    std::cout << "F_np1" << std::endl;
+    std::cout << std::setprecision(4) << F_np1 << std::endl;
+  }
+
   // Bring in internal state from previous step
   for (int s(0); s < num_slip_; ++s) {
     slip_n[s] = (*(previous_slips_[s]))(cell, pt);
     slip_np1[s] = slip_n[s];
     slip_dot_n[s] = (*(previous_slip_rates_[s]))(cell, pt);
     state_hardening_n[s] = (*(previous_hards_[s]))(cell, pt);
+    state_hardening_np1[s] = state_hardening_n[s];
   }
 
   //
   // Set up slip predictor to assign isochoric part of F_increment to Fp_increment
   //
+  minitensor::Vector<ScalarT, CP::MAX_SLIP>
+  slip_resistance(num_slip_, minitensor::Filler::ZEROS);
+
+  minitensor::Vector<ScalarT, CP::MAX_SLIP>
+  rates_slip(num_slip_, minitensor::Filler::ZEROS);
+
   if (dt_ > 0.0)
   {
+    bool
+    failed{false};
     switch (predictor_slip_)
     {
       case CP::PredictorSlip::NONE:
@@ -661,16 +690,47 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
 
       case CP::PredictorSlip::RATE:
       {
-        for (int s(0); s < num_slip_; ++s) {
-          slip_np1[s] += dt_ * slip_dot_n[s];
+
+        for (int s = 0; s < num_slip_; ++s)
+        {
+          rates_slip[s] = slip_dot_n[s];
+          slip_np1[s] = slip_n[s] + dt_ * rates_slip[s];
         }
+
         if (verbosity_ == CP::Verbosity::DEBUG) {
           std::cout << slip_np1 <<std::endl;
         }
+
+        CP::updateHardness<CP::MAX_DIM, CP::MAX_SLIP, ScalarT>(
+            slip_systems_,
+            slip_families_,
+            dt_,
+            rates_slip,
+            state_hardening_n,
+            state_hardening_np1,
+            slip_resistance,
+            failed);
+
       } break;
 
       case CP::PredictorSlip::SOLVE:
       {
+        minitensor::Tensor<RealType, CP::MAX_DIM> const
+        inv_F = minitensor::inverse(F_n);
+
+        minitensor::Tensor<RealType, CP::MAX_DIM> const
+        eye = minitensor::identity<RealType, CP::MAX_DIM>(num_dims_);
+
+        minitensor::Tensor<RealType, CP::MAX_DIM> const
+        F_np1_peeled = LCM::peel_tensor<EvalT, RealType, CP::MAX_DIM, CP::MAX_DIM>()(F_np1);
+
+        minitensor::Tensor<RealType, CP::MAX_DIM> const
+        L = 1.0 / dt_ * (F_np1_peeled * inv_F - eye);
+
+        if (minitensor::norm(L) < CP::MACHINE_EPS) {
+          break;
+        }
+
         auto const
         size_problem = std::max(num_slip_, num_dims_ * num_dims_);
 
@@ -680,7 +740,7 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
         dyad_matrix.fill(minitensor::Filler::ZEROS);
 
         for (int s = 0; s < num_slip_; ++s) {
-          for (int d(0); d < num_dims_ * num_dims_; ++d) {
+          for (int d(0); d < CP::MAX_DIM * CP::MAX_DIM; ++d) {
             dyad_matrix(d, s) = element_slip_systems.at(s).projector_[d];
           }
         }
@@ -698,26 +758,11 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
           S_svd(s, s) = S_svd(s, s) > 1.0e-12 ? 1.0 / S_svd(s,s) : 0.0;
         }
 
-        minitensor::Tensor<RealType, CP::MAX_SLIP>
-        Pinv(num_slip_);
-
+        minitensor::Tensor<RealType, CP::MAX_SLIP> const
         Pinv = V_svd * S_svd * S_svd * minitensor::transpose(V_svd);
 
-        minitensor::Tensor<RealType, CP::MAX_DIM> const
-        inv_F = minitensor::inverse(F_n);
-
-        minitensor::Tensor<RealType, CP::MAX_DIM> const
-        eye = minitensor::identity<RealType, CP::MAX_DIM>(num_dims_);
-
-        minitensor::Tensor<ScalarT, CP::MAX_DIM>
-        L(num_dims_);
-
-        L = 1.0 / dt_ * (F_np1 * inv_F - eye);
-
         minitensor::Vector<RealType, CP::MAX_SLIP>
-        L_vec(size_problem);
-
-        L_vec.fill(minitensor::Filler::ZEROS);
+        L_vec(size_problem, minitensor::Filler::ZEROS);
 
         int const
         num_p = 100;
@@ -725,13 +770,20 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
         RealType const
         inc_portion = 1.0 / num_p;
 
-        minitensor::Vector<ScalarT, CP::MAX_SLIP>
-        slip_np1_old(num_slip_);
-
-        slip_np1_old.fill(minitensor::Filler::ZEROS);
-
         RealType
-        max_power = 0.0;
+        min_diff = CP::HUGE_;
+
+        minitensor::Vector<RealType, CP::MAX_SLIP>
+        rates_slip_trial(num_slip_, minitensor::Filler::ZEROS);
+
+        minitensor::Vector<RealType, CP::MAX_SLIP>
+        slip_np1_trial(num_slip_, minitensor::Filler::ZEROS);
+
+        minitensor::Vector<RealType, CP::MAX_SLIP>
+        hardening_np1_trial(num_slip_, minitensor::Filler::ZEROS);
+
+        minitensor::Vector<RealType, CP::MAX_SLIP>
+        slip_resistance_trial(num_slip_, minitensor::Filler::ZEROS);
 
         for (int p = 1; p < num_p; ++p)
         {
@@ -744,14 +796,19 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
             }
           }
 
-          minitensor::Vector<RealType, CP::MAX_SLIP>
+          minitensor::Vector<RealType, CP::MAX_SLIP> const
           dm_lv = minitensor::transpose(dyad_matrix) * L_vec;
 
           minitensor::Vector<RealType, CP::MAX_SLIP>
           rates_slip_trial = Pinv * dm_lv;
 
+          RealType const
+          limit_rate = 1e-8 * minitensor::norm(rates_slip_trial);
+
           for (int s(0); s < num_slip_; ++s) {
-            slip_np1[s] = slip_n[s] + dt_ * rates_slip_trial[s];
+            rates_slip_trial[s] =
+                std::abs(rates_slip_trial[s]) > limit_rate ? rates_slip_trial[s] : 0.0;
+            slip_np1_trial[s] = slip_n[s] + dt_ * rates_slip_trial[s];
           }
 
           if (verbosity_ == CP::Verbosity::DEBUG)
@@ -776,7 +833,7 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
             std::cout << std::setprecision(4) << minitensor::exp(dt_ * L) * F_n << std::endl;
           }
 
-          minitensor::Tensor<ScalarT, CP::MAX_DIM>
+          minitensor::Tensor<RealType, CP::MAX_DIM>
           Lp_trial(num_dims_, minitensor::Filler::ZEROS);
 
           minitensor::Vector<RealType, CP::MAX_SLIP>
@@ -800,35 +857,122 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
             std::cout << std::setprecision(4) << minitensor::exp(dt_ * Lp_trial)<< std::endl;
           }
 
-          // Compute Lp_np1, and Fp_np1
-          CP::applySlipIncrement<CP::MAX_DIM, CP::MAX_SLIP, ScalarT>(
+          minitensor::Tensor<RealType, CP::MAX_DIM>
+          Fp_np1_trial(num_dims_, minitensor::Filler::ZEROS);
+
+          // Compute Lp_trial, and Fp_np1_trial
+          CP::applySlipIncrement<CP::MAX_DIM, CP::MAX_SLIP, RealType>(
               element_slip_systems,
               dt_,
               slip_n,
-              slip_np1,
+              slip_np1_trial,
               Fp_n,
               Lp_trial,
-              Fp_np1);
+              Fp_np1_trial);
+         
+          if (verbosity_ == CP::Verbosity::DEBUG)
+          {
+            std::cout << "Lp_trial" << std::endl;
+            std::cout << std::setprecision(4) << Lp_trial << std::endl;
+          }
+
+          // minitensor::Vector<RealType, CP::MAX_SLIP>
+          // rates_hardening(num_slip_, minitensor::Filler::ZEROS);
+
+          CP::updateHardness<CP::MAX_DIM, CP::MAX_SLIP, RealType>(
+            slip_systems_,
+            slip_families_,
+            dt_,
+            rates_slip_trial,
+            state_hardening_n,
+            hardening_np1_trial,
+            slip_resistance_trial,
+            failed);
+
+          minitensor::Vector<RealType, CP::MAX_SLIP>
+          shear_np1_trial_2(num_slip_);
+
+          for (int s{0}; s < num_slip_; ++s) {
+
+            auto const
+            slip_family = slip_families_[element_slip_systems.at(s).slip_family_index_];
+
+            // using Params = SaturationHardeningParameters<NumDimT, NumSlipT>;
+            // auto const
+            // phardening_parameters = slip_family.phardening_parameters_;
+            // auto const
+            // driver_hardening = 2.0 * slip_family.latent_matrix_ * std::abs(rates_slip_trial);
+            // auto const
+            // rate_slip_reference = phardening_params->getParameter(Params::RATE_SLIP_REFERENCE);
+            // auto const
+            // exponent_saturation = phardening_params->getParameter(Params::EXPONENT_SATURATION);
+            // auto const
+            // rate_effective = minitensor::norm_1(rates_slip_trial);
+            // auto const
+            // ratio_rate = rate_effective / rate_slip_reference;
+            // auto const
+            // stress_saturation_initial = phardening_params->getParameter(Params::STRESS_SATURATION_INITIAL);
+            // auto const
+            // stress_saturation = stress_saturation_initial * std::pow(ratio_rate, exponent_saturation);
+            // auto const
+            // resistance_slip_initial = phardening_params->getParameter(Params::STATE_HARDENING_INITIAL);
+            // auto const
+            // diff_hardening = stress_saturation - resistance_slip_initial;
+            // auto const
+            // numerator = state_hardening_n * diff_hardening + stress_saturation * dt_ * rate_effective;
+            // auto const
+            // denominator = diff_hardening + dt_ * rate_effective; 
+
+            // state_hardening_np1[ss_index_global] = numerator / denominator;
+
+            using Params = CP::PowerLawFlowParameters;
+            auto const
+            pflow_parameters = slip_family.pflow_parameters_;
+            RealType const
+            m = pflow_parameters->getParameter(Params::EXPONENT_RATE);
+            RealType const
+            g0 = pflow_parameters->getParameter(Params::RATE_SLIP_REFERENCE);
+            RealType const
+            ratio_rate = rates_slip_trial[s] / g0;
+            RealType const
+            sign_rate = ratio_rate > 0.0 ? 1.0 : -1.0;
+            shear_np1_trial_2[s] = hardening_np1_trial[s] * std::pow(std::abs(ratio_rate), 1.0 / m) * sign_rate;
+          }
 
           bool
           failed{false};
 
-          minitensor::Tensor<ScalarT, CP::MAX_DIM>
+          minitensor::Tensor4<RealType, CP::MAX_DIM> const
+          C_peeled = LCM::peel_tensor4<EvalT, RealType, CP::MAX_DIM, CP::MAX_DIM>()(C);
+
+          minitensor::Tensor<RealType, CP::MAX_DIM>
           sigma_np1(num_dims_);
 
-          minitensor::Tensor<ScalarT, CP::MAX_DIM>
+          minitensor::Tensor<RealType, CP::MAX_DIM>
           S_np1(num_dims_);
 
-          // Compute sigma_np1, S_np1, and shear_np1
-          CP::computeStress<CP::MAX_DIM, CP::MAX_SLIP, ScalarT>(
+          minitensor::Vector<RealType, CP::MAX_SLIP>
+          shear_np1_trial(num_slip_);
+
+          CP::computeStress<CP::MAX_DIM, CP::MAX_SLIP, RealType>(
               element_slip_systems,
-              C,
-              F_np1,
-              Fp_np1,
+              C_peeled,
+              F_np1_peeled,
+              Fp_np1_trial,
               sigma_np1,
               S_np1,
-              shear_np1,
+              shear_np1_trial,
               failed);
+         
+          if (verbosity_ == CP::Verbosity::DEBUG)
+          {
+            std::cout << "Fp_np1_trial" << std::endl;
+            std::cout << std::setprecision(4) << Fp_np1_trial << std::endl;
+            std::cout << "shear_np1_trial" << std::endl;
+            std::cout << std::setprecision(4) << shear_np1_trial << std::endl;
+            std::cout << "shear_np1_trial_2" << std::endl;
+            std::cout << std::setprecision(4) << shear_np1_trial_2 << std::endl;
+          }
 
           // Ensure that the stress was calculated properly
           if (failed == true) {
@@ -836,25 +980,64 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
             return;
           }
 
-          minitensor::Tensor<ScalarT, CP::MAX_DIM> const
-          stress_intermediate = S_np1; //FIXME: push S_np1 forward to intermediate configuration
+          minitensor::Tensor<RealType, CP::MAX_DIM> const
+          F_e = F_np1_peeled * minitensor::inverse(Fp_np1_trial);
+
+          minitensor::Tensor<RealType, CP::MAX_DIM> const
+          C_e = minitensor::transpose(F_e) * F_e;
+
+          minitensor::Tensor<RealType, CP::MAX_DIM> const
+          stress_intermediate = C_e * S_np1;
 
           RealType const
-          power_plastic = SSV::eval(minitensor::dotdot(Lp_trial, stress_intermediate));
+          power_plastic = minitensor::dotdot(Lp_trial, stress_intermediate);
+         
+          if (verbosity_ == CP::Verbosity::DEBUG)
+          {
+            std::cout << "hardening_np1_trial" << std::endl;
+            std::cout << std::setprecision(4) << hardening_np1_trial << std::endl;
+          }
 
-          if (!(power_plastic > max_power)) {
-            slip_np1 = slip_np1_old;
-          } else {
-            slip_np1_old = slip_np1;
-            max_power = power_plastic;
+          if (failed) {
+            this->forceGlobalLoadStepReduction("Failed on hardness");
+            return;
+          }
+
+          minitensor::Vector<RealType, CP::MAX_SLIP>
+          correction_hardening(num_slip_, minitensor::Filler::ONES);
+
+          // for (int s(0); s < num_slip_; ++s) {
+          //   correction_hardening[s] = 1.0 - 1.0 / hardening_np1_trial[s];
+          // }
+
+          RealType
+          dissipation{0.0};
+
+          for (int s(0); s < num_slip_; ++s) {
+            dissipation += 
+                shear_np1_trial[s] * rates_slip_trial[s] * correction_hardening[s];
+          }
+
+          RealType const
+          diff = std::abs(minitensor::dot(rates_slip_trial, shear_np1_trial) - 
+              minitensor::dot(rates_slip_trial, shear_np1_trial_2));
+
+          if (diff < min_diff) {
+            min_diff = diff;
+            for (int s(0); s < num_slip_; ++s) {
+              slip_np1[s] = slip_n[s] + dt_ * rates_slip_trial[s];
+              state_hardening_np1[s] = hardening_np1_trial[s];
+              slip_resistance[s] = slip_resistance_trial[s];
+            }
           }
 
           if (verbosity_ == CP::Verbosity::DEBUG) {
-            std::cout << portion_L << " " << power_plastic <<std::endl;
+            std::cout << "Plastic power" <<std::endl;
+            std::cout << minitensor::dot(rates_slip_trial, shear_np1_trial) << std::endl;
+            std::cout << minitensor::dot(rates_slip_trial, shear_np1_trial_2) << std::endl;
+            // std::cout << "slip_np1 " << &slip_np1 << std::endl;
+            // std::cout << slip_np1 <<std::endl;
           }
-        }
-        if (verbosity_ == CP::Verbosity::DEBUG) {
-          std::cout << slip_np1 <<std::endl;
         }
       } break;
 
@@ -864,7 +1047,7 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
     }
   }
 
-  if(verbosity_ >= CP::Verbosity::HIGH)
+  if(verbosity_ == CP::Verbosity::DEBUG)
   {
     for (int s(0); s < num_slip_; ++s) {
       std::cout << "Slip on system " << s << " before predictor: ";
@@ -886,15 +1069,13 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
   CP::StateInternal<ScalarT, CP::MAX_SLIP>
   state_internal(index_element_, pt, num_slip_, state_hardening_n, slip_n);
 
-  if (dt_ > 0.0) {
-    state_internal.rate_slip_ = (slip_np1 - slip_n) / dt_;
+  for (int s(0); s < num_slip_; ++s) {
+    state_internal.rates_slip_[s] = rates_slip[s];
+    state_internal.slip_np1_[s] = slip_np1[s];
+    state_internal.hardening_np1_[s] = state_hardening_np1[s];
+    state_internal.resistance_[s] = slip_resistance[s];
   }
-  else {
-    state_internal.rate_slip_.fill(minitensor::Filler::ZEROS);
-  }
-
-  state_internal.slip_np1_ = slip_np1;
-
+  
   if (dt_ == 0.0)
   {
     if (verbosity_ == CP::Verbosity::EXTREME)
@@ -913,7 +1094,7 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
       outfile.open(file);
       outfile.close();
     }
-
+        
   }
 
   auto
@@ -928,12 +1109,22 @@ CrystalPlasticityKernel<EvalT, Traits>::operator()(int cell, int pt) const
     state_mechanical,
     state_internal,
     C,
-    dt_);
+    dt_,
+    verbosity_);
 
   utility::StaticPointer<CP::Integrator<EvalT, CP::MAX_DIM, CP::MAX_SLIP>>
   integrator = integratorFactory(integration_scheme_, residual_type_);
 
   integrator->update();
+
+  if (verbosity_ >= CP::Verbosity::MEDIUM) {
+    std::cout << "Fp_{n+1}" << std::endl;
+    std::cout << state_mechanical.Fp_np1_ << std::endl;
+    std::cout << "sigma_{n+1}" << std::endl;
+    std::cout << state_mechanical.sigma_np1_ << std::endl;
+    std::cout << "g_{n+1}" << std::endl;
+    std::cout << state_internal.hardening_np1_ << std::endl;
+  }
 
   // Check to make sure there is only one status test
   ALBANY_ASSERT(integrator->getStatus() == nox_status_test_->status_);
@@ -1063,7 +1254,7 @@ CrystalPlasticityKernel<EvalT, Traits>::finalize(
   shear_np1 = state_internal.shear_np1_;
 
   minitensor::Vector<ScalarT, CP::MAX_SLIP> const
-  rate_slip = state_internal.rate_slip_;
+  rates_slip = state_internal.rates_slip_;
 
   ///
   /// Mechanical heat source
@@ -1071,7 +1262,7 @@ CrystalPlasticityKernel<EvalT, Traits>::finalize(
   if (have_temperature_ == true)
   {
     ScalarT const
-    plastic_dissipation = minitensor::dot(rate_slip, shear_np1);
+    plastic_dissipation = minitensor::dot(rates_slip, shear_np1);
 
     source_(cell, pt) = 0.9 / (density_ * heat_capacity_) * plastic_dissipation;
   }
@@ -1137,7 +1328,7 @@ CrystalPlasticityKernel<EvalT, Traits>::finalize(
     (*(slips_[s]))(cell, pt) = slip_np1[s];
     (*(hards_[s]))(cell, pt) = state_hardening_np1[s];
     (*(shears_[s]))(cell, pt) = shear_np1[s];
-    (*(slip_rates_[s]))(cell, pt) = state_internal.rate_slip_[s];
+    (*(slip_rates_[s]))(cell, pt) = state_internal.rates_slip_[s];
   }
 
   return;

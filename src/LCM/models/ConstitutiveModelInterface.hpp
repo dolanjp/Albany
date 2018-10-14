@@ -31,7 +31,8 @@ struct StateVariableRegistrationStruct
 /// \brief Constitutive Model Interface
 template <typename EvalT, typename Traits>
 class ConstitutiveModelInterface : public PHX::EvaluatorWithBaseImpl<Traits>,
-                                   public PHX::EvaluatorDerived<EvalT, Traits> {
+                                   public PHX::EvaluatorDerived<EvalT, Traits>
+{
  public:
   ///
   /// Constructor
@@ -132,8 +133,8 @@ class ConstitutiveModelInterface : public PHX::EvaluatorWithBaseImpl<Traits>,
   }
 
  private:
-  typedef typename EvalT::ScalarT     ScalarT;
-  typedef typename EvalT::MeshScalarT MeshScalarT;
+  using ScalarT     = typename EvalT::ScalarT;
+  using MeshScalarT = typename EvalT::MeshScalarT;
 
   ///
   /// Dependent MDFields

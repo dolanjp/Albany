@@ -7,21 +7,10 @@
 #ifndef PETRA_CONVERTERS_H
 #define PETRA_CONVERTERS_H
 
-#ifdef ALBANY_MPI
-  #define Albany_MPI_Comm MPI_Comm
-  #define Albany_MPI_COMM_WORLD MPI_COMM_WORLD
-  #define Albany_MPI_COMM_NULL MPI_COMM_NULL
-  #include "Epetra_MpiComm.h"
-  #include "Teuchos_DefaultMpiComm.hpp"
-#else
-  #define Albany_MPI_Comm int
-  #define Albany_MPI_COMM_WORLD 0  // This is compatible with Dakota
-  #define Albany_MPI_COMM_NULL 99
-  #include "Epetra_SerialComm.h"
-  #include "Teuchos_DefaultSerialComm.hpp"
-#endif
 #include "Teuchos_RCP.hpp"
 #include "Albany_DataTypes.hpp"
+
+#include "Epetra_Comm.h"
 #include "Epetra_Vector.h"
 #include "Epetra_CrsGraph.h"
 #include "Epetra_CrsMatrix.h"
@@ -29,24 +18,28 @@
 #include "Epetra_Import.h"
 #include "Epetra_LocalMap.h"
 
+#include "Kokkos_DefaultNode.hpp"
+
 namespace Petra {
-
-template<class LocalOrdinal , class GlobalOrdinal , class Node >
-Teuchos::RCP< const Tpetra_Map> createMapWithNode(const int & 	numElements,
-                                                  const Teuchos::Array< GlobalOrdinal > & 	elementList,
-                                                  const Teuchos::RCP< const Teuchos::Comm< int > > & 	 comm,
-                                                  const Teuchos::RCP< Node > & 	 node = Teuchos::null);
-
 //TpetraMap_To_EpetraMap: takes in Tpetra::Map object, converts it to its equivalent Epetra_Map object,
 //and returns an RCP pointer to this Epetra_Map
-Teuchos::RCP<Epetra_Map> TpetraMap_To_EpetraMap(const Teuchos::RCP<const Tpetra_Map>& tpetraMap_,
+Teuchos::RCP<const Epetra_Map> TpetraMap_To_EpetraMap(const Teuchos::RCP<const Tpetra_Map>& tpetraMap_,
                                                       const Teuchos::RCP<const Epetra_Comm>& comm_);
 
 //EpetraMap_To_TpetraMap: takes in Epetra_Map object, converts it to its equivalent Tpetra::Map object,
 //and returns an RCP pointer to this Tpetra::Map
 Teuchos::RCP<const Tpetra_Map> EpetraMap_To_TpetraMap(const Teuchos::RCP<const Epetra_Map>& epetraMap_,
-                                                      const Teuchos::RCP<const Teuchos::Comm<int> >& comm_,
-                                                      const Teuchos::RCP< KokkosNode > &node = KokkosClassic::Details::getNode< KokkosNode >());
+                                                      const Teuchos::RCP<const Teuchos::Comm<int> >& comm_);
+
+//EpetraMap_To_TpetraMap: takes in Epetra_Map object, converts it to its equivalent Tpetra::Map object,
+//and returns an RCP pointer to this Tpetra::Map
+Teuchos::RCP<const Tpetra_Map> EpetraMap_To_TpetraMap(const Epetra_Map& epetraMap_,
+                                                      const Teuchos::RCP<const Teuchos::Comm<int> >& comm_);
+
+//EpetraMap_To_TpetraMap: takes in Epetra_Map object, converts it to its equivalent Tpetra::Map object,
+//and returns an RCP pointer to this Tpetra::Map
+Teuchos::RCP<const Tpetra_Map> EpetraMap_To_TpetraMap(const Epetra_BlockMap& epetraMap_,
+                                                      const Teuchos::RCP<const Teuchos::Comm<int> >& comm_);
 
 Teuchos::RCP<Epetra_CrsGraph> TpetraCrsGraph_To_EpetraCrsGraph(const Teuchos::RCP<const Tpetra_CrsGraph>& tpetraCrsGraph_,
                                                                 const Teuchos::RCP<const Epetra_Comm>& comm);
@@ -73,13 +66,11 @@ void TpetraVector_To_EpetraVector(const Teuchos::RCP<const Tpetra_Vector>& tpetr
 
 //EpetraVector_To_TpetraVectorConst: copies const Epetra_Vector to const Tpetra_Vector
 Teuchos::RCP<const Tpetra_Vector> EpetraVector_To_TpetraVectorConst(const Epetra_Vector& epetraVector_,
-                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_,
-                                                               const Teuchos::RCP< KokkosNode > &node = KokkosClassic::Details::getNode< KokkosNode >());
+                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_);
 
 //EpetraVector_To_TpetraVectorNonConst: copies non-const Epetra_Vector to non-const Tpetra_Vector
 Teuchos::RCP<Tpetra_Vector> EpetraVector_To_TpetraVectorNonConst(const Epetra_Vector& epetraVector_,
-                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_,
-                                                               const Teuchos::RCP< KokkosNode > &node = KokkosClassic::Details::getNode< KokkosNode >());
+                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_);
 
 //TpetraMultiVector_To_EpetraMultiVector: copies Tpetra::MultiVector object into its analogous
 //Epetra_MultiVector object
@@ -88,13 +79,11 @@ void TpetraMultiVector_To_EpetraMultiVector(const Teuchos::RCP<const Tpetra_Mult
 
 //EpetraMultiVector_To_TpetraMultiVectorConst: copies Epetra_MultiVector to const Tpetra_MultiVector
 Teuchos::RCP<Tpetra_MultiVector> EpetraMultiVector_To_TpetraMultiVector(const Epetra_MultiVector& epetraMV_,
-                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_,
-                                                               const Teuchos::RCP< KokkosNode > &node = KokkosClassic::Details::getNode< KokkosNode >());
+                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_);
 
 //EpetraCrsMatrix_To_TpetraCrsMatrix: copies Epetra_CrsMatrix to its analogous Tpetra_CrsMatrix
 Teuchos::RCP<Tpetra_CrsMatrix> EpetraCrsMatrix_To_TpetraCrsMatrix(Epetra_CrsMatrix& epetraMatrix_,
-                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_,
-                                                               const Teuchos::RCP< KokkosNode > &node = KokkosClassic::Details::getNode< KokkosNode >());
+                                                               const Teuchos::RCP<const Teuchos::Comm<int> >& commT_);
 
 
 // Convenience class for conversions. One use case is to inherit from this class

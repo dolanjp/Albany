@@ -23,39 +23,65 @@ namespace LCM {
 template <typename EvalT, typename Traits>
 class ACEdensity : public PHX::EvaluatorWithBaseImpl<Traits>,
                    public PHX::EvaluatorDerived<EvalT, Traits>,
-                   public Sacado::ParameterAccessor<EvalT, SPL_Traits> {
+                   public Sacado::ParameterAccessor<EvalT, SPL_Traits>
+{
  public:
   using ScalarT = typename EvalT::ScalarT;
 
-  ACEdensity(Teuchos::ParameterList& p);
+  ///
+  /// Constructor
+  ///
+  ACEdensity(
+      Teuchos::ParameterList&              p,
+      const Teuchos::RCP<Albany::Layouts>& dl);
 
+  ///
+  /// Phalanx method to allocate space
+  ///
   void
   postRegistrationSetup(
       typename Traits::SetupData d,
       PHX::FieldManager<Traits>& vm);
 
+  ///
   /// Calculates mixture model density
+  ///
   void
   evaluateFields(typename Traits::EvalData workset);
 
-  /// Gets the intrinsic density values
+  ///
+  /// Sacado method to access parameters
+  ///
   ScalarT&
   getValue(const std::string& n);
 
  private:
+  ///
+  /// Number of integration points
+  ///
   int num_qps_{0};
+
+  ///
+  /// Number of problem dimensions
+  ///
   int num_dims_{0};
 
-  // contains the mixture model density value
+  // Inputs: MDFields that density depends on
+  PHX::MDField<ScalarT const, Cell, QuadPoint> porosity_;
+  PHX::MDField<ScalarT const, Cell, QuadPoint> ice_saturation_;
+  PHX::MDField<ScalarT const, Cell, QuadPoint> water_saturation_;
+
+  ///
+  /// Output: Contains the mixture model density value
+  ///
   PHX::MDField<ScalarT, Cell, QuadPoint> density_;
-  
+
   // contains the intrinsic density values for ice, water, sediment
   // these values are constant
   ScalarT rho_ice_{0.0};
   ScalarT rho_wat_{0.0};
   ScalarT rho_sed_{0.0};
-
 };
 }  // namespace LCM
 
-#endif  // ACE_density_hpp
+#endif  // ACEdensity_hpp

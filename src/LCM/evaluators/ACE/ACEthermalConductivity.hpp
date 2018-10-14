@@ -21,32 +21,60 @@ namespace LCM {
 /// Evaluates thermal conductivity at integration points
 ///
 template <typename EvalT, typename Traits>
-class ACEthermalConductivity : public PHX::EvaluatorWithBaseImpl<Traits>,
-                   public PHX::EvaluatorDerived<EvalT, Traits>,
-                   public Sacado::ParameterAccessor<EvalT, SPL_Traits> {
+class ACEthermalConductivity
+    : public PHX::EvaluatorWithBaseImpl<Traits>,
+      public PHX::EvaluatorDerived<EvalT, Traits>,
+      public Sacado::ParameterAccessor<EvalT, SPL_Traits>
+{
  public:
   using ScalarT = typename EvalT::ScalarT;
 
-  ACEthermalConductivity(Teuchos::ParameterList& p);
+  ///
+  /// Constructor
+  ///
+  ACEthermalConductivity(
+      Teuchos::ParameterList&              p,
+      const Teuchos::RCP<Albany::Layouts>& dl);
 
+  ///
+  /// Phalanx method to allocate space
+  ///
   void
   postRegistrationSetup(
       typename Traits::SetupData d,
       PHX::FieldManager<Traits>& vm);
 
+  ///
   /// Calculates mixture model thermal conductivity
+  ///
   void
   evaluateFields(typename Traits::EvalData workset);
 
-  /// Gets the intrinsic thermal conductivity values
+  ///
+  /// Sacado method to access parameters
+  ///
   ScalarT&
   getValue(const std::string& n);
 
  private:
+  ///
+  /// Number of integration points
+  ///
   int num_qps_{0};
+
+  ///
+  /// Number of problem dimensions
+  ///
   int num_dims_{0};
 
-  // contains the mixture model thermal conductivity value
+  // MDFields that thermal conductivity depends on
+  PHX::MDField<const ScalarT, Cell, QuadPoint> porosity_;
+  PHX::MDField<const ScalarT, Cell, QuadPoint> ice_saturation_;
+  PHX::MDField<const ScalarT, Cell, QuadPoint> water_saturation_;
+
+  ///
+  /// Contains the mixture model thermal conductivity value
+  ///
   PHX::MDField<ScalarT, Cell, QuadPoint> thermal_conductivity_;
 
   // contains the intrinsic thermal conductivity values for ice, water, sediment
@@ -54,7 +82,6 @@ class ACEthermalConductivity : public PHX::EvaluatorWithBaseImpl<Traits>,
   ScalarT k_ice_{0.0};
   ScalarT k_wat_{0.0};
   ScalarT k_sed_{0.0};
-
 };
 }  // namespace LCM
 

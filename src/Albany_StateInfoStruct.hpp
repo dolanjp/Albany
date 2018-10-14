@@ -21,10 +21,14 @@
 
 #include <string>
 #include <vector>
+#include <map>
+
 #include "Intrepid2_Polylib.hpp"
+#include "Phalanx_DataLayout.hpp"
 #include "Shards_Array.hpp"
 #include "Shards_CellTopologyData.h"
 
+#include "Albany_ScalarOrdinalTypes.hpp"
 #include "Adapt_NodalDataBase.hpp"
 
 //! Container for minimal mesh specification info needed to
@@ -80,7 +84,10 @@ struct MeshSpecsStruct
         sepEvalsByEB(sepEvalsByEB_),
         cubatureRule(cubatureRule_)
   {
+    TEUCHOS_TEST_FOR_EXCEPTION (cubatureDegree<0, Teuchos::Exceptions::InvalidArgument,
+                                "Error! Invalid cubature degree on element block '" << ebName << "'.\n");
   }
+
   // nonconst to allow replacement when the mesh adapts
   CellTopologyData ctd;
   int              numDim;

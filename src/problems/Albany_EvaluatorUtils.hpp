@@ -138,9 +138,35 @@ namespace Albany {
        Teuchos::RCP<std::map<std::string, int> > extruded_params_levels,
        int offsetToFirstDOF=0, std::string scatterName="Scatter") const;
 
+    //! Function to create parameter list for construction of ScatterResidual
+    //! evaluator with standard Field names
+    //! Tensor rank of solution variable is 0, 1, or 2
+    Teuchos::RCP< PHX::Evaluator<Traits> >
+    constructScatterResidualEvaluator(
+       int tensorRank,
+       Teuchos::ArrayRCP<std::string> resid_names,
+       int offsetToFirstDOF=0, std::string scatterName="Scatter") const;
+
+#ifdef ALBANY_CONTACT
+    //! Function to create parameter list for construction of MortarContactResidual
+    //! evaluator with standard Field names
+    //! Tensor rank of solution variable is 0, 1, or 2
+    Teuchos::RCP< PHX::Evaluator<Traits> >
+    constructMortarContactResidualEvaluator(
+       Teuchos::ArrayRCP<std::string> resid_names,
+       int offsetToFirstDOF=0) const;
+
+#endif
+
     //! Function to create parameter list for construction of GatherScalarNodalParameter
     Teuchos::RCP< PHX::Evaluator<Traits> >
     constructGatherScalarNodalParameter(
+        const std::string& param_name,
+        const std::string& field_name="") const;
+
+    //! Function to create parameter list for construction of ScatterScalarNodalParameter
+    Teuchos::RCP< PHX::Evaluator<Traits> >
+    constructScatterScalarNodalParameter(
         const std::string& param_name,
         const std::string& field_name="") const;
 
@@ -150,14 +176,11 @@ namespace Albany {
         const std::string& param_name,
         const std::string& field_name="") const;
 
-    //! Function to create parameter list for construction of ScatterResidual
-    //! evaluator with standard Field names
-    //! Tensor rank of solution variable is 0, 1, or 2
+    //! Function to create parameter list for construction of ScatterScalarExtruded2DNodalParameter
     Teuchos::RCP< PHX::Evaluator<Traits> >
-    constructScatterResidualEvaluator(
-       int tensorRank,
-       Teuchos::ArrayRCP<std::string> resid_names,
-       int offsetToFirstDOF=0, std::string scatterName="Scatter") const;
+    constructScatterScalarExtruded2DNodalParameter(
+        const std::string& param_name,
+        const std::string& field_name="") const;
 
     //! Function to create parameter list for construction of DOFInterpolation
     //! evaluator with standard field names
@@ -168,12 +191,16 @@ namespace Albany {
     //   computed, and the chain rule is coded with that known sparsity.
     Teuchos::RCP< PHX::Evaluator<Traits> >
     constructDOFInterpolationEvaluator(
-       const std::string& dof_names, int offsetToFirstDOF=-1) const;
+        const std::string& dof_names,
+        int offsetToFirstDOF = -1,
+        const bool enableMemoizer = false) const;
 
     //! Same as above, for Interpolating the Gradient
     Teuchos::RCP< PHX::Evaluator<Traits> >
     constructDOFGradInterpolationEvaluator(
-       const std::string& dof_names, int offsetToFirstDOF=-1) const;
+        const std::string& dof_names,
+        int offsetToFirstDOF = -1,
+        const bool enableMemoizer = false) const;
 
     //! Interpolation functions for vector quantities
     Teuchos::RCP< PHX::Evaluator<Traits> >
@@ -197,8 +224,9 @@ namespace Albany {
     //! Interpolation functions for scalar quantities defined on a side set
     Teuchos::RCP< PHX::Evaluator<Traits> >
     constructDOFInterpolationSideEvaluator(
-       const std::string& dof_names,
-       const std::string& sideSetName) const;
+        const std::string& dof_names,
+        const std::string& sideSetName,
+        const bool enableMemoizer = false) const;
 
     //! Interpolation functions for vector defined on a side set
     Teuchos::RCP< PHX::Evaluator<Traits> >
@@ -221,15 +249,18 @@ namespace Albany {
     //! Function to create parameter list for construction of GatherCoordinateVector
     //! evaluator with standard Field names
     Teuchos::RCP< PHX::Evaluator<Traits> >
-    constructGatherCoordinateVectorEvaluator(std::string strCurrentDisp="") const;
+    constructGatherCoordinateVectorEvaluator(
+        std::string strCurrentDisp="",
+        const bool enableMemoizer = false) const;
 
     //! Function to create parameter list for construction of MapToPhysicalFrame
     //! evaluator with standard Field names
     Teuchos::RCP< PHX::Evaluator<Traits> >
     constructMapToPhysicalFrameEvaluator(
-      const Teuchos::RCP<shards::CellTopology>& cellType,
-      const Teuchos::RCP<Intrepid2::Cubature<PHX::Device> > cubature,
-      const Teuchos::RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> > intrepidBasis = Teuchos::null) const;
+        const Teuchos::RCP<shards::CellTopology>& cellType,
+        const Teuchos::RCP<Intrepid2::Cubature<PHX::Device> > cubature,
+        const Teuchos::RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> > intrepidBasis = Teuchos::null,
+        const bool enableMemoizer = false) const;
 
     //! Function to create parameter list for construction of MapToPhysicalFrameSide
     //! evaluator with standard Field names
@@ -242,11 +273,12 @@ namespace Albany {
     //! Function to create evaluator for restriction to side set
     Teuchos::RCP< PHX::Evaluator<Traits> >
     constructDOFCellToSideEvaluator(
-       const std::string& cell_dof_name,
-       const std::string& sideSetName,
-       const std::string& layout,
-       const Teuchos::RCP<shards::CellTopology>& cellType = Teuchos::null,
-       const std::string& side_dof_name = "") const;
+        const std::string& cell_dof_name,
+        const std::string& sideSetName,
+        const std::string& layout,
+        const Teuchos::RCP<shards::CellTopology>& cellType = Teuchos::null,
+        const std::string& side_dof_name = "",
+        const bool enableMemoizer = false) const;
 
     //! Combo: restriction to side plus interpolation
     Teuchos::RCP< PHX::Evaluator<Traits> >
@@ -269,15 +301,17 @@ namespace Albany {
     //! Function to create evaluator NodesToCellInterpolation (=DOFInterpolation+QuadPointsToCellInterpolation)
     Teuchos::RCP< PHX::Evaluator<Traits> >
     constructNodesToCellInterpolationEvaluator(
-      const std::string& dof_name,
-      bool isVectorField = false) const;
+        const std::string& dof_name,
+        bool isVectorField = false,
+        const bool enableMemoizer = false) const;
 
     //! Function to create evaluator QuadPointsToCellInterpolation
     Teuchos::RCP< PHX::Evaluator<Traits> >
     constructQuadPointsToCellInterpolationEvaluator(
-      const std::string& dof_name,
-      const Teuchos::RCP<PHX::DataLayout> qp_layout = Teuchos::null,
-      const Teuchos::RCP<PHX::DataLayout> cell_layout= Teuchos::null) const;
+        const std::string& dof_name,
+        const Teuchos::RCP<PHX::DataLayout> qp_layout = Teuchos::null,
+        const Teuchos::RCP<PHX::DataLayout> cell_layout = Teuchos::null,
+        const bool enableMemoizer = false) const;
 
     //! Function to create evaluator QuadPointsToCellInterpolation
     Teuchos::RCP< PHX::Evaluator<Traits> >
@@ -290,18 +324,21 @@ namespace Albany {
     //! evaluator with standard Field names
     Teuchos::RCP< PHX::Evaluator<Traits> >
     constructComputeBasisFunctionsEvaluator(
-      const Teuchos::RCP<shards::CellTopology>& cellType,
-      const Teuchos::RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> > intrepidBasis,
-      const Teuchos::RCP<Intrepid2::Cubature<PHX::Device> > cubature) const;
+        const Teuchos::RCP<shards::CellTopology>& cellType,
+        const Teuchos::RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> > intrepidBasis,
+        const Teuchos::RCP<Intrepid2::Cubature<PHX::Device> > cubature,
+        const bool enableMemoizer = false) const;
 
     //! Function to create parameter list for construction of ComputeBasisFunctionsSide
     //! evaluator with standard Field names
     Teuchos::RCP< PHX::Evaluator<Traits> >
     constructComputeBasisFunctionsSideEvaluator(
-      const Teuchos::RCP<shards::CellTopology>& cellType,
-      const Teuchos::RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> > intrepidBasisSide,
-      const Teuchos::RCP<Intrepid2::Cubature<PHX::Device> > cubatureSide,
-      const std::string& sideSetName) const;
+        const Teuchos::RCP<shards::CellTopology>& cellType,
+        const Teuchos::RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> > intrepidBasisSide,
+        const Teuchos::RCP<Intrepid2::Cubature<PHX::Device> > cubatureSide,
+        const std::string& sideSetName,
+        const bool enableMemoizer = false,
+        const bool buildNormals = false) const;
 
   private:
 

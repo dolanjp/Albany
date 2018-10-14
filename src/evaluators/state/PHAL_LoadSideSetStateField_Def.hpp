@@ -19,6 +19,9 @@ template<typename EvalT, typename Traits>
 LoadSideSetStateField<EvalT, Traits>::
 LoadSideSetStateField (const Teuchos::ParameterList& p)
 {
+  if (p.isType<bool>("Enable Memoizer") && p.get<bool>("Enable Memoizer"))
+    memoizer.enable_memoizer();
+
   sideSetName = p.get<std::string>("Side Set Name");
 
   fieldName = p.get<std::string>("Field Name");
@@ -45,6 +48,8 @@ template<typename EvalT, typename Traits>
 void LoadSideSetStateField<EvalT, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
+  if (memoizer.have_stored_data(workset)) return;
+
   TEUCHOS_TEST_FOR_EXCEPTION (workset.sideSets==Teuchos::null, std::logic_error,
                               "Error! The mesh does not store any side set.\n");
 
