@@ -52,11 +52,7 @@ namespace _3DM {
     this->addDependentField(deltaTime);
 
     this->addEvaluatedField(residual_);
-  
-  
-  
-
-  
+   
     std::vector<PHX::Device::size_type> dims;
     w_grad_bf_.fieldTag().dataLayout().dimensions(dims);
     workset_size_ = dims[0];
@@ -65,7 +61,6 @@ namespace _3DM {
     num_dims_     = dims[3];
 
     Temperature_Name_ = p.get<std::string>("Temperature Name")+"_old";
-
 
     this->setName("Phase_Residual"+PHX::typeAsString<EvalT>());
   }
@@ -131,49 +126,43 @@ namespace _3DM {
     }
 
 
-    //THESE ARE HARD CODED NOW. NEEDS TO BE CHANGED TO USER INPUT LATER
-    ScalarT Coeff_volExp = 65.2e-6; //per kelvins
-    ScalarT Ini_temp = 300; //kelvins
-   
- 
-      for (int cell = 0; cell < workset.numCells; ++cell) {
-	for (int qp = 0; qp < num_qps_; ++qp) {
-	  for (int node = 0; node < num_nodes_; ++node) {
-	    residual_(cell, node) += (
-				      w_grad_bf_(cell, node, qp, 0) * term1_(cell, qp, 0)
-				      + w_grad_bf_(cell, node, qp, 1) * term1_(cell, qp, 1)
-				      + w_grad_bf_(cell, node, qp, 2) * term1_(cell, qp, 2));
-	  }
-	}
-      }
-      // heat source from laser 
-      for (int cell = 0; cell < workset.numCells; ++cell) {
-	for (int qp = 0; qp < num_qps_; ++qp) {
-	  for (int node = 0; node < num_nodes_; ++node) {
-	    residual_(cell, node) -= (w_bf_(cell, node, qp) * laser_source_(cell, qp));
-	  }
-	}
-      }
-      // all other problem sources
-      for (int cell = 0; cell < workset.numCells; ++cell) {
-	for (int qp = 0; qp < num_qps_; ++qp) {
-	  for (int node = 0; node < num_nodes_; ++node) {
-	    residual_(cell, node) -= (w_bf_(cell, node, qp) * source_(cell, qp));
-	  }
-	}
-      }
-      // transient term
-      for (int cell = 0; cell < workset.numCells; ++cell) {
-	for (int qp = 0; qp < num_qps_; ++qp) {
-	  for (int node = 0; node < num_nodes_; ++node) {
-	    residual_(cell, node) += (w_bf_(cell, node, qp) * energyDot_(cell, qp));
-	  }
-	}
-      }
-	  
+    for (int cell = 0; cell < workset.numCells; ++cell) {
+		for (int qp = 0; qp < num_qps_; ++qp) {
+			for (int node = 0; node < num_nodes_; ++node) {
+				residual_(cell, node) += (   w_grad_bf_(cell, node, qp, 0) * term1_(cell, qp, 0)
+										   + w_grad_bf_(cell, node, qp, 1) * term1_(cell, qp, 1)
+										   + w_grad_bf_(cell, node, qp, 2) * term1_(cell, qp, 2));
+			}
+		}
     }
-         
-  
-
+	
+    // heat source from laser 
+    for (int cell = 0; cell < workset.numCells; ++cell) {
+		for (int qp = 0; qp < num_qps_; ++qp) {
+			for (int node = 0; node < num_nodes_; ++node) {
+				residual_(cell, node) -= (w_bf_(cell, node, qp) * laser_source_(cell, qp));
+			}
+		}
+    }
+	
+    // all other problem sources
+    for (int cell = 0; cell < workset.numCells; ++cell) {
+		for (int qp = 0; qp < num_qps_; ++qp) {
+			for (int node = 0; node < num_nodes_; ++node) {
+				residual_(cell, node) -= (w_bf_(cell, node, qp) * source_(cell, qp));
+			}
+		}
+    }
+	  
+    // transient term
+    for (int cell = 0; cell < workset.numCells; ++cell) {
+		for (int qp = 0; qp < num_qps_; ++qp) {
+			for (int node = 0; node < num_nodes_; ++node) {
+				residual_(cell, node) += (w_bf_(cell, node, qp) * energyDot_(cell, qp));
+			}
+		}
+    }
+	  
+  }
   //*********************************************************************
 }

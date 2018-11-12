@@ -26,17 +26,7 @@ AMPThermoMechanics(const Teuchos::RCP<Teuchos::ParameterList>& params_,
   material_db_ = Teuchos::rcp(new Albany::MaterialDatabase(filename, commT));
 
   // get consolidation flag from material input deck. If not specified then assign true.
-  hasConsolidation_ = material_db_->getParam<bool>("Compute Consolidation",true);
-  
-  // Tell user if consolidation is on or off
-  Teuchos::RCP<Teuchos::FancyOStream> out = Teuchos::VerboseObjectBase::getDefaultOStream();
-  
-  if (! hasConsolidation_ ) {
-      *out << "*******************************" << std::endl;
-      *out << "WARNING: Consolidation is OFF" << std::endl;
-      *out << "*******************************" << std::endl;
-  }
-  
+  //hasConsolidation_ = material_db_->getParam<bool>("Compute Consolidation",true);
   
   this->setNumEquations(1);
 }
@@ -146,9 +136,7 @@ void Albany::AMPThermoMechanics::constructNeumannEvaluators(
         std::endl << "Error: Sidesets only supported in 2 and 3D." << std::endl);
 
   condNames[1] = "dudn";
-
   condNames[2] = "scaled jump";
-
   condNames[3] = "robin";
 
   nfm.resize(1); // Heat problem only has one physics set   

@@ -45,10 +45,8 @@ namespace _3DM {
     cond_list->validateParameters(*reflist, 0, 
 				  Teuchos::VALIDATE_USED_ENABLED, Teuchos::VALIDATE_DEFAULTS_DISABLED); 
 
-    //std::string typ = cond_list->get("Psi2 Type", "Constant"); 
     constant_value_ = cond_list->get("Psi2", 0.0); 
-  
-
+ 
     psi2_Name_ = p.get<std::string>("Psi2 Name")+"_old";
     phi2_Name_ = p.get<std::string>("Phi2 Name")+"_old";
     this->setName("Psi2"+PHX::typeAsString<EvalT>());

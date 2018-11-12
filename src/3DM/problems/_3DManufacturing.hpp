@@ -120,7 +120,6 @@ namespace Albany {
 #include "Psi2.hpp"
 
 #include "ThCond.hpp"
-//#include "Phase_Source.hpp" 
 #include "Laser_Source.hpp"
 #include "_3DM_Residual.hpp"
 #include "Energy_Dot.hpp"

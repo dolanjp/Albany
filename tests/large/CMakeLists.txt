@@ -26,9 +26,9 @@ ENDIF()
 
 # AMP   ##################
 
-IF(ALBANY_AMP)
-  add_subdirectory(AMP)
-ENDIF()
+#IF(ALBANY_AMP)
+#  add_subdirectory(AMP)
+#ENDIF()
 
 IF(ALBANY_PERFORMANCE_TESTS)
   add_subdirectory(PerformanceTests)

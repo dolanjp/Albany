@@ -52,19 +52,10 @@ Laser_Source(Teuchos::ParameterList& p,
   // dummy variable used multiple times below
   std::string type; 
 
-    //type = cond_list->get("Laser Beam Radius Type", "Constant");
     laser_beam_radius = cond_list->get("Laser Beam Radius", 1.0);
-
-    //type = cond_list->get("Average Laser Power Type", "Constant");
     average_laser_power = cond_list->get("Average Laser Power", 1.0);
-
-    //type = cond_list->get("Extinction coefficient Type", "Constant");
     extinction_coeff = cond_list->get("Extinction coefficient", 1.0);
-
-    //type = cond_list->get("Laser Pulse Frequency Type", "Constant");
     laser_pulse_frequency = cond_list->get("Laser Pulse Frequency", 1.0);
-
-    //type = cond_list->get("Reflectivity Type", "Constant");
     reflectivity =  cond_list->get("Reflectivity", 1.0);
 
   this->setName("Laser_Source"+PHX::typeAsString<EvalT>());
@@ -96,17 +87,13 @@ evaluateFields(typename Traits::EvalData workset)
   
   
   _3DM::LaserCenter Val;
-  Val.t = t;
-  
+  Val.t = t; 
   RealType x, y, power_fraction;
   int power;
   LaserData_.getLaserPosition(t,Val,x,y,power,power_fraction);
   ScalarT Laser_center_x = x;
   ScalarT Laser_center_y = y;
   ScalarT Laser_power_fraction = power_fraction;
-
-
-  
 
   // source function
   ScalarT pi = 3.1415926535897932;
@@ -149,19 +136,10 @@ getValidLaser_SourceParameters() const
   Teuchos::RCP<Teuchos::ParameterList> valid_pl =
     rcp(new Teuchos::ParameterList("Valid Laser Source Params"));;
  
-  //valid_pl->set<std::string>("Laser Beam Radius Type", "Constant");
   valid_pl->set<double>("Laser Beam Radius", 1.0);
-
-  //valid_pl->set<std::string>("Average Laser Power Type", "Constant");
   valid_pl->set<double>("Average Laser Power", 1.0);
-
-  //valid_pl->set<std::string>("Extinction coefficient Type", "Constant");
   valid_pl->set<double>("Extinction coefficient", 1.0);
-
-  //valid_pl->set<std::string>("Laser Pulse Frequency Type", "Constant");
   valid_pl->set<double>("Laser Pulse Frequency", 1.0);
-
-  //valid_pl->set<std::string>("Reflectivity Type", "Constant");
   valid_pl->set<double>("Reflectivity", 1.0);
 
   return valid_pl;

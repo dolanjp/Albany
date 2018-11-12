@@ -149,12 +149,6 @@ Albany::AMPThermoMechanics::constructEvaluators(
   Teuchos::RCP<Teuchos::ParameterList> pFromProb = Teuchos::rcp(
       new Teuchos::ParameterList("Response Parameters from Problem"));
 
-  // // Problem is transient
-  // TEUCHOS_TEST_FOR_EXCEPTION(
-  //     number_of_time_deriv != 1,
-  //     std::logic_error,
-  //     "AMPThermoMechanics must be defined as a transient calculation.");
-
   const CellTopologyData* const elem_top = &meshSpecs.ctd;
 
   std::string eb_name = meshSpecs.ebName;
