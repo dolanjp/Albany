@@ -9,4 +9,4 @@
 #include "ConsolidationResidual.hpp"
 #include "ConsolidationResidual_Def.hpp"
 
-PHAL_INSTANTIATE_TEMPLATE_CLASS(LCM::ConsolidationResidual)
+PHAL_INSTANTIATE_TEMPLATE_CLASS(_3DM::ConsolidationResidual)

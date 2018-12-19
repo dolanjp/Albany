@@ -12,15 +12,15 @@ namespace _3DM
   //constructor
   Laser::Laser()
   {
+	 /*
     std::ifstream is("LaserCenter.txt", std::ifstream::in);
     TEUCHOS_TEST_FOR_EXCEPTION(!is, Teuchos::Exceptions::InvalidParameter,
 			       std::endl << "Laser Database Error: Laser filename required: LaserCenter.txt" << std::endl);
 
     std::cout << "Reading file ..." << std::endl;
 
-    RealType t,x,y,power_fraction;
-    int power;
-    while (is >> t >> x >> y >> power >> power_fraction)
+    RealType t,x,y,power;
+    while (is >> t >> x >> y >> power)
       {
 	//data
 	LaserCenter Data;
@@ -28,14 +28,38 @@ namespace _3DM
 	Data.t = t;
 	Data.x = x;
 	Data.y = y;
-	Data.power = power;
-    Data.power_fraction = power_fraction;
+    Data.power = power;
 	//
 	LaserData_.push_back(Data);
       }
 
     is.close();
+	*/
+  }
+  //Imports laser path data from specified laser path input file
+  Laser::Import_Laser_Path_Data(std::string laser_path_filename)
+  {
+    std::ifstream is(laser_path_filename.c_str(), std::ifstream::in);
+    TEUCHOS_TEST_FOR_EXCEPTION(!is, Teuchos::Exceptions::InvalidParameter,
+			       std::endl << "Laser Database Error: Laser Filename specified in the input file is invalid" << std::endl);
 
+    std::cout << "Reading file ..." << std::endl;
+
+    RealType t,x,y,power;
+    while (is >> t >> x >> y >> power)
+      {
+	//data
+	LaserCenter Data;
+	//
+	Data.t = t;
+	Data.x = x;
+	Data.y = y;
+    Data.power = power;
+	//
+	LaserData_.push_back(Data);
+      }
+
+    is.close();
   }
   // copy constructor
   Laser::Laser(const Laser &A)
@@ -56,7 +80,7 @@ namespace _3DM
   }
 
   // interpolate
-  void Laser::getLaserPosition(RealType t, LaserCenter val, RealType &x, RealType &y, int &power, RealType &power_fraction)
+  void Laser::getLaserPosition(RealType t, LaserCenter val, RealType &x, RealType &y, RealType &power)
   {
     Teuchos::Array<LaserCenter>::iterator low;
     // this line below works because Teuchos::Array<T> is a lighweight implementation of
@@ -71,8 +95,7 @@ namespace _3DM
     RealType t1 = low->t;
     RealType x1 = low->x;	
     RealType y1 = low->y;
-    int power1 = low->power;
-    RealType power_fraction1 = low->power_fraction; 
+    RealType power_1 = low->power; 
     
     if ( low != LaserData_.begin() )
       {
@@ -89,8 +112,7 @@ namespace _3DM
     RealType t2 = low->t;
     RealType x2 = low->x;	
     RealType y2 = low->y;
-    int power2 = low->power;
-    RealType power_fraction2 = low->power_fraction;
+    RealType power_2 = low->power;
    
     // now interpolate data between point 1 and 2:
     // P = (1-q)*A + q*B
@@ -106,19 +128,8 @@ namespace _3DM
     x = (1.0 - q)*x1 + q*x2;
     // z position
     y = (1.0 - q)*y1 + q*y2;
-    // power fraction
-    power_fraction = (1.0 - q)*power_fraction1 + q*power_fraction2;
-
-    // check if laser is on or off at time t
-    if (  (power1 == 1 ) && (power2 == 1) )
-      {
-	power = 1; // on
-      }
-    else
-      {
-	power = 0; // off
-      }
-  }
+    // laser power (absolute, not fraction)
+    power = (1.0 - q)*power_1 + q*power_2;
 
   // function used in some STL (standard template library) containers
   bool compLaserCenter(LaserCenter A, LaserCenter B)

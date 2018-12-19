@@ -43,15 +43,6 @@ namespace _3DM {
     num_qps_      = dims[1];
 
 	
-	if (sim_type == "SLM Additive"){
-		Teuchos::ParameterList* cond_list = p.get<Teuchos::ParameterList*>("Powder Parameter List");
-		//Assume constant thermal conductivity in the powder
-		Kp_ = cond_list->get("a", 1.0);
-	}	
-	else{
-		Kp_ = 0;
-	}
-	
     Teuchos::ParameterList* cond_list =
        p.get<Teuchos::ParameterList*>("Parameter List");
 
@@ -60,7 +51,7 @@ namespace _3DM {
 
     cond_list->validateParameters(*reflist, 0,
        Teuchos::VALIDATE_USED_ENABLED, Teuchos::VALIDATE_DEFAULTS_DISABLED);
-
+	   
 	//Parameters for the functional form of the thermal conductivity
     a = cond_list->get("a", 1.0);
     b = cond_list->get("b", 1.0);
@@ -70,9 +61,22 @@ namespace _3DM {
 
     Kl_ =  cond_list->get("Thermal Conductivity Liquid", 1.0);
     Kv_ =  cond_list->get("Thermal Conductivity Vapor", 1.0);
-
+	
+	Teuchos::ParameterList* input_list =
+		p.get<Teuchos::ParameterList*>("Input List");  
+		
+	sim_type = input_list->get<std::string>("Simulation Type");
+		
+	if (sim_type == "SLM Additive"){
+		Teuchos::ParameterList* cond_list = p.get<Teuchos::ParameterList*>("Powder Parameter List");
+		//Assume constant thermal conductivity in the powder
+		Kp_ = cond_list->get("a", 1.0);
+	}	
+	else{
+		Kp_ = 0;
+	}
+	
     this->setName("ThCond"+PHX::typeAsString<EvalT>());
-
   }
 
   //**********************************************************************
@@ -84,6 +88,7 @@ namespace _3DM {
     this->utils.setFieldData(coord_,fm);
     this->utils.setFieldData(T_,fm);
     this->utils.setFieldData(phi1_,fm);
+    this->utils.setFieldData(psi1_,fm);	
     this->utils.setFieldData(psi2_,fm);
     this->utils.setFieldData(k_,fm);
   }

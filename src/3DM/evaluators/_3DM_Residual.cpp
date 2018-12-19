@@ -6,7 +6,7 @@
 
 #include "PHAL_AlbanyTraits.hpp"
 
-#include "Phase_Residual.hpp"
-#include "Phase_Residual_Def.hpp"
+#include "_3DM_Residual.hpp"
+#include "_3DM_Residual_Def.hpp"
 
 PHAL_INSTANTIATE_TEMPLATE_CLASS(_3DM::Phase_Residual)

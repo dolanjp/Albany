@@ -47,10 +47,8 @@ namespace _3DM {
     PHX::MDField<MeshScalarT,Cell,Node,QuadPoint,Dim> w_grad_bf_;
     PHX::MDField<ScalarT,Cell,QuadPoint> T_;
     PHX::MDField<ScalarT,Cell,QuadPoint,Dim> T_grad_;
-    //PHX::MDField<ScalarT,Cell,QuadPoint> T_dot_;
     PHX::MDField<ScalarT,Cell,QuadPoint> k_;
     PHX::MDField<ScalarT,Cell,QuadPoint> rho_cp_;
-    PHX::MDField<ScalarT,Cell,QuadPoint> source_;
     PHX::MDField<ScalarT,Cell,QuadPoint> phi1_;
     PHX::MDField<ScalarT,Cell,QuadPoint> phi2_;
     PHX::MDField<ScalarT,Cell,QuadPoint> psi1_;
@@ -66,9 +64,12 @@ namespace _3DM {
     unsigned int num_dims_;
     unsigned int num_nodes_;
     unsigned int workset_size_;
+	
+	std::string sim_type;
+	ScalarT initial_porosity;
+	ScalarT F_inv;
+	ScalarT det_F;
   
-  
-
     bool enable_transient_;
     std::string Temperature_Name_;
     Kokkos::DynRankView<ScalarT, PHX::Device> term1_;

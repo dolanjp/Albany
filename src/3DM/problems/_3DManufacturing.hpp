@@ -386,6 +386,7 @@ Albany::_3DManufacturing::constructEvaluators(
     p->set<string>("Psi1 Name", "Psi1");	
     p->set<string>("Psi2 Name", "Psi2");
     p->set<Teuchos::ParameterList*>("Parameter List", &param_list);
+	p->set<Teuchos::ParameterList*>("Input List", &params);
 
     //Output
     p->set<string>("Thermal Conductivity Name", "k");
@@ -417,7 +418,7 @@ Albany::_3DManufacturing::constructEvaluators(
     RCP<ParameterList> p = rcp(new ParameterList("Laser Source Function"));
 
     Teuchos::ParameterList& param_list =
-      material_db_->getElementBlockSublist(eb_name, "Laser Source"); 
+      material_db_->getElementBlockSublist(eb_name, "Laser Source");
 
     //Input
     p->set<string>("Coordinate Name","Coord Vec");
@@ -426,6 +427,7 @@ Albany::_3DManufacturing::constructEvaluators(
 	p->set<string>("Psi1 Name", "Psi1");	
     p->set<string>("Psi2 Name", "Psi2");
     p->set<Teuchos::ParameterList*>("Parameter List", &param_list);
+    p->set<Teuchos::ParameterList*>("Input List", &params);
 
     //Output
     p->set<string>("Laser Source Name", "Laser Source");
@@ -464,6 +466,7 @@ Albany::_3DManufacturing::constructEvaluators(
     p->set<string>("Delta Time Name","Delta Time");
     p->set<string>("rho_Cp Name", "rho_Cp");
     p->set<Teuchos::ParameterList*>("Phase Change Parameter List", &param_list_phase);
+	p->set<Teuchos::ParameterList*>("Input List", &params);
 
 
     // take Phi1 parameter list
@@ -517,10 +520,8 @@ Albany::_3DManufacturing::constructEvaluators(
     p->set<string>("Weighted Gradient BF Name","wGrad BF");
     p->set<string>("Temperature Name","Temperature");
     p->set<string>("Temperature Gradient Name","Temperature Gradient");
-    //p->set<string>("Temperature Time Derivative Name","Temperature_dot");
     p->set<string>("Thermal Conductivity Name","k");
     p->set<string>("rho_Cp Name","rho_Cp");
-    //p->set<string>("Source Name","Source");
     p->set<string>("Laser Source Name","Laser Source");
     p->set<string>("Phi1 Name","Phi1");
     p->set<string>("Phi2 Name","Phi2");
@@ -530,6 +531,7 @@ Albany::_3DManufacturing::constructEvaluators(
     p->set<string>("Energy Rate Name", "Energy Rate");
     p->set<string>("Time Name","Time");
     p->set<string>("Delta Time Name","Delta Time");
+	p->set<Teuchos::ParameterList*>("Input List", &params);
     
 
     //Output

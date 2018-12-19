@@ -43,24 +43,32 @@ namespace _3DM {
     typedef typename EvalT::ScalarT ScalarT;
     typedef typename EvalT::MeshScalarT MeshScalarT;
 
-    ScalarT extinction_coeff;
-    ScalarT laser_wavelength; 
-    ScalarT laser_beam_radius;
-    ScalarT average_laser_power;
-    ScalarT instantaneous_laser_power;
+	//From materials file
+    ScalarT absortivity;
     ScalarT reflectivity;
+	
+	//From main 3DM input file
+    ScalarT laser_beam_radius;
+    ScalarT initial_porosity;
+	ScalarT powder_diameter;
+	ScalarT powder_layer_thickness;
+	std::string sim_type;
+	std::string laser_path_filename;
   
     PHX::MDField<MeshScalarT,Cell,QuadPoint,Dim> coord_;
     PHX::MDField<ScalarT,Cell,QuadPoint> laser_source_;
     PHX::MDField<ScalarT,Dummy> time;
     PHX::MDField<ScalarT,Dummy> deltaTime;
+	PHX::MDField<ScalarT,Cell,QuadPoint> psi1_;
+    PHX::MDField<ScalarT,Cell,QuadPoint> psi2_;
 
     unsigned int num_qps_;
     unsigned int num_dims_;
     unsigned int num_nodes_;
     unsigned int workset_size_;
 
-    Laser LaserData_;
+	//Create an object that will import and contain an array of the laser path data
+    Laser Laser_object;
 
     Teuchos::RCP<const Teuchos::ParameterList>
     getValidLaser_SourceParameters() const;

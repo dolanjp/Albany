@@ -4,8 +4,8 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-#ifndef CONSOLIDATIONRESIDUAL_HPP
-#define CONSOLIDATIONRESIDUAL_HPP
+#ifndef _3DM_CONSOLIDATIONRESIDUAL_HPP
+#define _3DM_CONSOLIDATIONRESIDUAL_HPP
 
 #include <Phalanx_Evaluator_Derived.hpp>
 #include <Phalanx_Evaluator_WithBaseImpl.hpp>
@@ -15,7 +15,7 @@
 #include "AAdapt_RC_Field.hpp"
 #include "Albany_Layouts.hpp"
 
-namespace LCM {
+namespace _3DM {
 ///
 /// \brief Consolidation Residual
 ///

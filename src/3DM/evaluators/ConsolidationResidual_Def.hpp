@@ -18,7 +18,7 @@
 //#define DEBUG_OUTPUT
 
 //This is a direct modification of the MechanicsResidual_Def.hpp evaluator
-namespace LCM {
+namespace _3DM {
 
 //------------------------------------------------------------------------------
 template<typename EvalT, typename Traits>

@@ -108,8 +108,10 @@ namespace _3DM {
     // Get the Volumetic Heat Capacity at the dense state of the material. 
     cond_list = p.get<Teuchos::ParameterList*>("Volumetric Heat Capacity Dense Parameter List");
     Cd_ = cond_list->get("Value",4.25e6);
-
-
+	
+    cond_list = p.get<Teuchos::ParameterList*>("Input List");
+	ScalarT initial_porosity = cond_list->get("Powder Layer Initial Porosity", 1.0)
+	
     this->setName("Energy_Dot" + PHX::typeAsString<EvalT>());
 
   }

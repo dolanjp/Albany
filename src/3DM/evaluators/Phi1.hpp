@@ -4,8 +4,8 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-#ifndef PHI1_HPP
-#define PHI1_HPP
+#ifndef _3DM_PHI1_HPP
+#define _3DM_PHI1_HPP
 
 #include "Phalanx_config.hpp"
 #include "Phalanx_Evaluator_WithBaseImpl.hpp"

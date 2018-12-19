@@ -4,8 +4,8 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-#ifndef THCOND_HPP
-#define THCOND_HPP
+#ifndef _3DM_THCOND_HPP
+#define _3DM_THCOND_HPP
 
 #include "Phalanx_config.hpp"
 #include "Phalanx_Evaluator_WithBaseImpl.hpp"
@@ -66,11 +66,14 @@ namespace _3DM {
 	
 	// Thermal conductivity in the powder, if needed
 	ScalarT Kp_;
+	
+	std::string sim_type;
 
     PHX::MDField<MeshScalarT,Cell,QuadPoint,Dim> coord_;
     PHX::MDField<ScalarT,Cell,QuadPoint> T_;
     PHX::MDField<ScalarT,Cell,QuadPoint> k_;
     PHX::MDField<ScalarT,Cell,QuadPoint> phi1_;
+    PHX::MDField<ScalarT,Cell,QuadPoint> psi1_;
     PHX::MDField<ScalarT,Cell,QuadPoint> psi2_;
 
     unsigned int num_qps_;

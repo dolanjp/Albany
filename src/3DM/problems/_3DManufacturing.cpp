@@ -24,12 +24,12 @@ _3DManufacturing(const Teuchos::RCP<Teuchos::ParameterList>& params_,
   std::string filename = params->get<std::string>("MaterialDB Filename");
   material_db_ = Teuchos::rcp(new Albany::MaterialDatabase(filename, commT));
 
-  sim_type = params->get("Simulation Type", "SLM Additive");
+  sim_type = params->get<std::string>("Simulation Type");
   powder_layer_thickness = params->get("Powder Layer Thickness", 50e-6);
   initial_porosity = params->get("Powder Layer Initial Porosity", 0.652);
   powder_diameter = params->get("Powder Diameter", 30e-6); 
   laser_beam_radius = params->get("Laser Beam Radius", 1);
-  laser_path_filename = params->get("Laser Path Input Filename", "LaserCenter.txt");
+  laser_path_filename = params->get<std::string>("Laser Path Input Filename");
   
   //Make sure sim_type is valid. For now, only "SLM Additive" will be valid
   if (sim_type != "SLM Additive"){

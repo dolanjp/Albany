@@ -25,8 +25,7 @@ namespace _3DM
     RealType t; // time
     RealType x; // x-ccordinate
     RealType y; // y-coordinate
-    int power;  // 1 => laser active. 0 => laser inactive
-    RealType power_fraction; //Laser power fraction to be applied on the Max. Laser power at different times. 
+    RealType power; //Laser power fraction to be applied on the Max. Laser power at different times. 
   };
 
   class Laser
@@ -38,10 +37,12 @@ namespace _3DM
     Laser(const Laser &A);
     // destructor
     ~Laser();
+	//Imports laser path data from specified laser path input file
+    void Import_Laser_Path_Data(std::string laser_path_filename);
     // get LaserData_
     const Teuchos::Array<LaserCenter> &getLaserData();
     // interpolate
-    void getLaserPosition(RealType time, LaserCenter val, RealType &x, RealType &y, int &power, RealType &power_fraction);
+    void getLaserPosition(RealType time, LaserCenter val, RealType &x, RealType &y, RealType &power);
   private:
     Teuchos::Array<LaserCenter> LaserData_;
   };

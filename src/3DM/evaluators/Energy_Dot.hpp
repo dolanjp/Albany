@@ -4,8 +4,8 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-#ifndef ENERGY_DOT_HPP
-#define ENERGY_DOT_HPP
+#ifndef _3DM_ENERGY_DOT_HPP
+#define _3DM_ENERGY_DOT_HPP
 
 #include "Phalanx_config.hpp"
 #include "Phalanx_Evaluator_WithBaseImpl.hpp"
