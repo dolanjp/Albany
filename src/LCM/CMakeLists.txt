@@ -93,42 +93,6 @@ set(model-eval-headers
   )
 ENDIF(ALBANY_STK)
 
-# LCM ACE evaluators
-set(ace-sources
-  "${LCM_DIR}/evaluators/ACE/ACEdensity.cpp"
-  "${LCM_DIR}/evaluators/ACE/ACEfreezingCurve.cpp"
-  "${LCM_DIR}/evaluators/ACE/ACEheatCapacity.cpp"
-  "${LCM_DIR}/evaluators/ACE/ACEiceSaturation.cpp"
-  "${LCM_DIR}/evaluators/ACE/ACEmeltingTemperature.cpp"
-  "${LCM_DIR}/evaluators/ACE/ACEporosity.cpp"
-  "${LCM_DIR}/evaluators/ACE/ACEtemperatureChange.cpp"
-  "${LCM_DIR}/evaluators/ACE/ACEthermalConductivity.cpp"
-  "${LCM_DIR}/evaluators/ACE/ACEthermalInertia.cpp"
-  "${LCM_DIR}/evaluators/ACE/ACEwaterSaturation.cpp"
-)
-set(ace-headers
-  "${LCM_DIR}/evaluators/ACE/ACEdensity.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEdensity_Def.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEfreezingCurve.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEfreezingCurve_Def.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEheatCapacity.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEheatCapacity_Def.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEiceSaturation.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEiceSaturation_Def.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEmeltingTemperature.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEmeltingTemperature_Def.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEporosity.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEporosity_Def.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEtemperatureChange.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEtemperatureChange_Def.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEthermalConductivity.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEthermalConductivity_Def.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEthermalInertia.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEthermalInertia_Def.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEwaterSaturation.hpp"
-  "${LCM_DIR}/evaluators/ACE/ACEwaterSaturation_Def.hpp"
-)
-
 # LCM special boundary conditions
 set(bc-sources
   "${LCM_DIR}/evaluators/bc/EquilibriumConcentrationBC.cpp"
@@ -352,6 +316,9 @@ set(surface-element-sources
   "${LCM_DIR}/evaluators/surface-element/SurfaceL2ProjectionResidual.cpp"
   "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradient.cpp"
   "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperator.cpp"
+  "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperatorPorePressure.cpp"
+  "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperatorTransport.cpp"
+  "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperatorHydroStress.cpp"
   "${LCM_DIR}/evaluators/surface-element/SurfaceScalarJump.cpp"
   "${LCM_DIR}/evaluators/surface-element/SurfaceTLPoroMassResidual.cpp"
   "${LCM_DIR}/evaluators/surface-element/SurfaceVectorGradient.cpp"
@@ -373,6 +340,12 @@ set(surface-element-headers
   "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradient.hpp"
   "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperator_Def.hpp"
   "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperator.hpp"
+  "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperatorPorePressure_Def.hpp"
+  "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperatorPorePressure.hpp"
+  "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperatorTransport_Def.hpp"
+  "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperatorTransport.hpp"
+  "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperatorHydroStress_Def.hpp"
+  "${LCM_DIR}/evaluators/surface-element/SurfaceScalarGradientOperatorHydroStress.hpp"
   "${LCM_DIR}/evaluators/surface-element/SurfaceScalarJump_Def.hpp"
   "${LCM_DIR}/evaluators/surface-element/SurfaceScalarJump.hpp"
   "${LCM_DIR}/evaluators/surface-element/SurfaceTLPoroMassResidual_Def.hpp"
@@ -703,7 +676,6 @@ set(INCLUDE_DIRS
   ${Albany_SOURCE_DIR}/src/adapt
   ${LCM_DIR}/problems
   ${LCM_DIR}/evaluators
-  ${LCM_DIR}/evaluators/ACE
   ${LCM_DIR}/evaluators/bc
   ${LCM_DIR}/evaluators/HMC
   ${LCM_DIR}/evaluators/kinematics

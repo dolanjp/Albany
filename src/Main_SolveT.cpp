@@ -22,6 +22,7 @@
 #include "Teuchos_VerboseObject.hpp"
 #include "Thyra_DefaultProductVector.hpp"
 #include "Thyra_DefaultProductVectorSpace.hpp"
+#include "Tpetra_Core.hpp"
 #include "MatrixMarket_Tpetra.hpp"
 
 // Uncomment for run time nan checking
@@ -507,6 +508,8 @@ main(int argc, char *argv[]) {
       }
       Albany::printTpetraVector(*out, g);
 
+      if (num_p == 0)  
+          status += slvrfctry.checkSolveTestResultsT(i, 0, g.get(), NULL);
       for (int j=0; j<num_p; j++) {
         const RCP<const Tpetra_MultiVector> dgdp = sensitivities[i][j];
         if (Teuchos::nonnull(dgdp)) {

@@ -128,27 +128,18 @@ endif ()
 
 set (PREFIX_DIR /projects/albany)
 set (INTEL_PREFIX_DIR ${PREFIX_DIR}/intel5.1)
-set (GCC_MPI_DIR /projects/sierra/linux_rh6/SDK/mpi/openmpi/1.10.2-gcc-5.4.0-RHEL6)
-set (GCC_DBG_MPI_DIR /projects/sierra/linux_rh6/SDK/mpi/openmpi/1.10.2-gcc-7.2.0-RHEL6)
-set (GCC_DIR /projects/sierra/linux_rh6/SDK/compilers/gcc/5.4.0-RHEL6)
-set (GCC_DBG_DIR /projects/sierra/linux_rh6/SDK/compilers/gcc/7.2.0-RHEL6)
-set (INTEL_DIR /sierra/sntools/SDK/compilers/intel/composer_xe_2018.1.163/compilers_and_libraries/linux)
+#set (GCC_MPI_DIR /projects/sierra/linux_rh6/SDK/mpi/openmpi/1.10.2-gcc-5.4.0-RHEL6)
+#set (GCC_DBG_MPI_DIR /projects/sierra/linux_rh6/SDK/mpi/openmpi/1.10.2-gcc-7.2.0-RHEL6)
+set (GCC_MPI_DIR $ENV{MPI_HOME})
+set (GCC_DBG_MPI_DIR $ENV{MPI_HOME})
 
 set (BOOST_ROOT /projects/albany)
 set (INTEL_BOOST_ROOT ${BOOST_ROOT}/intel5.1)
 set (CLANG_BOOST_ROOT ${BOOST_ROOT}/clang)
 
-set (INTEL_MPI_DIR /projects/sierra/linux_rh6/SDK/mpi/intel/5.1.2.150)
-set (MKL_PATH ${INTEL_DIR}/mkl/lib/intel64)
-
-set (USE_LAME OFF)
-set (LAME_INC_DIR "/projects/sierra/linux_rh6/install/master/lame/include\;/projects/sierra/linux_rh6/install/master/Sierra/sierra_util/include\;/projects/sierra/linux_rh6/install/master/stk/stk_expreval/include\;/projects/sierra/linux_rh6/install/master/utility/include\;/projects/sierra/linux_rh6/install/master/Sierra/include")
-set (LAME_LIB_DIR "/projects/sierra/linux_rh6/install/master/lame/lib\;/projects/sierra/linux_rh6/install/master/Sierra/sierra_util/lib\;/projects/sierra/linux_rh6/install/master/stk/stk_expreval/lib\;/projects/sierra/linux_rh6/install/master/utility/lib\;/projects/sierra/linux_rh6/install/master/Sierra/lib")
-set (LAME_LIBRARIES "sierra_util_diag\;sierra_util_events\;sierra_util_user_input_function\;sierra_util_domain\;sierra_util_sctl\;stk_expreval\;utility\;sierra\;dataManager\;audit\;sierraparser")
-set (MATH_TOOLKIT_INC_DIR
-  "/projects/sierra/linux_rh6/install/master/math_toolkit/include")
-set (MATH_TOOLKIT_LIB_DIR
-  "/projects/sierra/linux_rh6/install/master/math_toolkit/lib")
+SET (INTEL_MPI_DIR $ENV{MPI_HOME})
+SET (MPI_BIN_DIR $ENV{MPI_BIN})
+SET (MPI_LIB_DIR $ENV{MPI_LIB})
 
 set (CTEST_SOURCE_DIRECTORY "${CTEST_DASHBOARD_ROOT}/${CTEST_SOURCE_NAME}")
 # Build all results in a scratch space
@@ -465,10 +456,8 @@ set (COMMON_CONFIGURE_OPTIONS
   "-DTPL_ENABLE_BoostAlbLib:BOOL=ON"
   #
   #
-  "-DTPL_BLAS_LIBRARIES:STRING='-L${MKL_PATH} -L${INTEL_DIR}/lib/intel64 -lmkl_intel_lp64 -lmkl_blas95_lp64 -lmkl_core -lmkl_sequential -lmkl_core -lirc -limf -lsvml -lintlc'"
-  "-DTPL_LAPACK_LIBRARIES:STRING='-L${MKL_PATH} -lmkl_lapack95_lp64'"
-  #
-  "-DTrilinos_ENABLE_ThreadPool:BOOL=ON"
+  "-DTPL_BLAS_LIBRARIES:STRING='-L$ENV{LIBRARY_PATH} -L$ENV{MKLHOME}/../compiler/lib/intel64 -lmkl_intel_lp64 -lmkl_blas95_lp64 -lmkl_core -lmkl_sequential -lmkl_core -lirc -limf -lsvml -lintlc'"
+  "-DTPL_LAPACK_LIBRARIES:STRING='-L$ENV{LIBRARY_PATH} -lmkl_lapack95_lp64'"
   #
   "-DTrilinos_ENABLE_TESTS:BOOL=OFF"
   "-DTrilinos_ENABLE_EXAMPLES:BOOL=OFF"
@@ -523,7 +512,6 @@ set (COMMON_CONFIGURE_OPTIONS
   "-DTrilinos_ENABLE_PyTrilinos:BOOL=OFF"
   #
   "-DTrilinos_ENABLE_STK:BOOL=ON"
-  "-DTrilinos_ENABLE_STKClassic:BOOL=OFF"
   "-DTrilinos_ENABLE_SEACASIoss:BOOL=ON"
   "-DTrilinos_ENABLE_SEACASExodus:BOOL=ON"
   "-DTrilinos_ENABLE_STKUtil:BOOL=ON"
@@ -573,7 +561,7 @@ if (BUILD_TRILINOS)
     "-DCMAKE_Fortran_COMPILER:STRING=${GCC_MPI_DIR}/bin/mpifort"
     "-DCMAKE_Fortran_FLAGS:STRING='-O3 -march=native -DNDEBUG'"
 #
-    "-DTrilinos_EXTRA_LINK_FLAGS='-L${PREFIX_DIR}/lib -lnetcdf -lpnetcdf -lhdf5_hl -lhdf5 -lz -lm -Wl,-rpath,${PREFIX_DIR}/lib:${MKL_PATH}:${INTEL_DIR}/lib/intel64:${GCC_DIR}/lib64'"
+    "-DTrilinos_EXTRA_LINK_FLAGS='-L${PREFIX_DIR}/lib -lnetcdf -lpnetcdf -lhdf5_hl -lhdf5 -lz -lm -Wl,-rpath,${PREFIX_DIR}/lib:$ENV{LIBRARY_PATH}:$ENV{MKLHOME}/../compiler/lib/intel64'"
     "-DCMAKE_INSTALL_PREFIX:PATH=${INSTALL_LOCATION}"
     "-DBoost_INCLUDE_DIRS:PATH=${BOOST_ROOT}/include"
     "-DBoost_LIBRARY_DIRS:PATH=${BOOST_ROOT}/lib"
@@ -643,13 +631,9 @@ if (BUILD_ALB32)
     "-DENABLE_LCM:BOOL=ON"
     "-DENABLE_CONTACT:BOOL=OFF"
     "-DENABLE_LCM_SPECULATIVE:BOOL=OFF"
-    "-DENABLE_HYDRIDE:BOOL=ON"
     "-DENABLE_LANDICE:BOOL=ON"
     "-DENABLE_AERAS:BOOL=ON"
-    "-DENABLE_QCAD:BOOL=ON"
-    "-DENABLE_MOR:BOOL=ON"
     "-DENABLE_ATO:BOOL=ON"
-    "-DENABLE_AMP:BOOL=OFF"
     "-DENABLE_ASCR:BOOL=OFF"
     "-DENABLE_STRONG_FPE_CHECK:BOOL=ON"
     )
@@ -679,10 +663,8 @@ if (BUILD_ALB64)
     "-DENABLE_64BIT_INT:BOOL=ON"
 #    "-DENABLE_ALBANY_EPETRA_EXE:BOOL=OFF"
     "-DENABLE_LCM:BOOL=ON"
+    "-DENABLE_LANDICE:BOOL=ON"
     "-DENABLE_LCM_SPECULATIVE:BOOL=OFF"
-    "-DENABLE_HYDRIDE:BOOL=ON"
-    "-DENABLE_QCAD:BOOL=ON"
-    "-DENABLE_MOR:BOOL=ON"
     "-DENABLE_STRONG_FPE_CHECK:BOOL=ON"
     )
   if (BUILD_SCOREC)
@@ -716,7 +698,7 @@ if (BUILD_TRILINOSCLANG)
 #    "-DMDS_ID_TYPE:STRING='long long int'"
     "-DMDS_ID_TYPE:STRING='long int'"
     "-DSCOREC_DISABLE_STRONG_WARNINGS:BOOL=ON"
-    "-DTrilinos_EXTRA_LINK_FLAGS='-L${PREFIX_DIR}/clang/lib -lnetcdf -lpnetcdf -lhdf5_hl -lhdf5 -lz -lm -Wl,-rpath,${PREFIX_DIR}/clang/lib:${MKL_PATH}:${INTEL_DIR}/lib/intel64:${GCC_DIR}/lib64'"
+    "-DTrilinos_EXTRA_LINK_FLAGS='-L${PREFIX_DIR}/clang/lib -lnetcdf -lpnetcdf -lhdf5_hl -lhdf5 -lz -lm -Wl,-rpath,${PREFIX_DIR}/clang/lib:$ENV{LIBRARY_PATH}:$ENV{MKLHOME}/../compiler/lib/intel64'"
     "-DCMAKE_INSTALL_PREFIX:PATH=${INSTALL_LOCATION}"
     "-DBUILD_SHARED_LIBS:BOOL=OFF"
     "-DAmesos2_ENABLE_KLU2:BOOL=ON"
@@ -753,7 +735,8 @@ if (BUILD_TRILINOSCLANG)
     "-DParMETIS_LIBRARY_DIRS:PATH=${PREFIX_DIR}/clang/lib"
   #
     "-DTPL_ENABLE_SuperLU:BOOL=ON"
-    "-DSuperLU_INCLUDE_DIRS:PATH=${PREFIX_DIR}/clang/SuperLU_4.3/include"
+    #"-DSuperLU_INCLUDE_DIRS:PATH=${PREFIX_DIR}/clang/SuperLU_4.3/include"
+    "-DSuperLU_INCLUDE_DIRS:PATH=${PREFIX_DIR}/SuperLU_4.3/include"
     "-DSuperLU_LIBRARY_DIRS:PATH=${PREFIX_DIR}/clang/SuperLU_4.3/lib"
     "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON"
     "-DCMAKE_INSTALL_RPATH:STRING=${PREFIX_DIR}/clang/lib"
@@ -775,12 +758,9 @@ if (BUILD_ALB64CLANG)
     "-DENABLE_64BIT_INT:BOOL=ON"
 # Run even the epetra tests
 #    "-DENABLE_ALBANY_EPETRA_EXE:BOOL=OFF"
-    "-DENABLE_LCM:BOOL=ON"
-    "-DENABLE_HYDRIDE:BOOL=ON"
-    "-DENABLE_QCAD:BOOL=ON"
+    "-DENABLE_LCM:BOOL=OFF"
+    "-DENABLE_LANDICE:BOOL=ON"
     "-DENABLE_LCM_SPECULATIVE:BOOL=OFF"
-    "-DENABLE_HYDRIDE:BOOL=ON"
-    "-DENABLE_MOR:BOOL=ON"
     "-DENABLE_STRONG_FPE_CHECK:BOOL=ON"
     )
   if (BUILD_SCOREC)
@@ -812,7 +792,7 @@ if (BUILD_TRILINOSDBG)
     "-DTrilinos_ENABLE_SCOREC:BOOL=ON"
     "-DMDS_ID_TYPE:STRING='long int'"
     "-DSCOREC_DISABLE_STRONG_WARNINGS:BOOL=ON"
-    "-DTrilinos_EXTRA_LINK_FLAGS='-L${PREFIX_DIR}/lib -lnetcdf -lpnetcdf -lhdf5_hl -lhdf5 -lz -lm -Wl,-rpath,${PREFIX_DIR}/lib:${MKL_PATH}:${INTEL_DIR}/lib/intel64:${GCC_DBG_DIR}/lib64'"
+    "-DTrilinos_EXTRA_LINK_FLAGS='-L${PREFIX_DIR}/lib -lnetcdf -lpnetcdf -lhdf5_hl -lhdf5 -lz -lm -Wl,-rpath,${PREFIX_DIR}/lib:$ENV{LIBRARY_PATH}:$ENV{MKLHOME}/../compiler/lib/intel64'"
     "-DCMAKE_INSTALL_PREFIX:PATH=${INSTALL_LOCATION}"
     "-DBUILD_SHARED_LIBS:BOOL=OFF"
     "-DAmesos2_ENABLE_KLU2:BOOL=ON"
@@ -872,10 +852,8 @@ if (BUILD_ALB64DBG)
     "-DENABLE_ALBANY_EPETRA_EXE:BOOL=OFF"
     "-DENABLE_CONTACT:BOOL=OFF"
     "-DENABLE_LCM:BOOL=ON"
+    "-DENABLE_LANDICE:BOOL=ON"
     "-DENABLE_LCM_SPECULATIVE:BOOL=OFF"
-    "-DENABLE_HYDRIDE:BOOL=ON"
-    "-DENABLE_QCAD:BOOL=OFF"
-    "-DENABLE_MOR:BOOL=OFF"
     "-DENABLE_STRONG_FPE_CHECK:BOOL=ON"
     )
   if (BUILD_SCOREC)
@@ -894,12 +872,8 @@ if (BUILD_ALBFUNCTOR)
   set (CONF_OPTIONS
     "-DALBANY_TRILINOS_DIR:PATH=${CTEST_INSTALL_DIRECTORY}/TrilinosInstall"
     "-DENABLE_LCM:BOOL=ON"
-    "-DENABLE_MOR:BOOL=ON"
     "-DENABLE_LANDICE:BOOL=ON"
-    "-DENABLE_HYDRIDE:BOOL=ON"
-    "-DENABLE_AMP:BOOL=OFF"
     "-DENABLE_ATO:BOOL=ON"
-    "-DENABLE_QCAD:BOOL=ON"
     "-DENABLE_ASCR:BOOL=OFF"
     "-DENABLE_AERAS:BOOL=ON"
     "-DENABLE_64BIT_INT:BOOL=ON"

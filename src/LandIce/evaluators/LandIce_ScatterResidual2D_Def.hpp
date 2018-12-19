@@ -7,6 +7,8 @@
 #include "Teuchos_TestForException.hpp"
 #include "Phalanx_DataLayout.hpp"
 
+#include "LandIce_ScatterResidual2D.hpp"
+
 namespace PHAL {
 
 // **********************************************************************
@@ -30,15 +32,9 @@ ScatterResidual2D(const Teuchos::ParameterList& p,
   : ScatterResidual<PHAL::AlbanyTraits::Jacobian,Traits>(p,dl),
     numFields(ScatterResidual<PHAL::AlbanyTraits::Jacobian,Traits>::numFieldsBase)
 {
-
   cell_topo = p.get<Teuchos::RCP<const CellTopologyData> >("Cell Topology");
-  if (p.isType<int>("Field Level"))
-    fieldLevel = p.get<int>("Field Level");
-  else fieldLevel = -1;
-  if (p.isType<const std::string>("Mesh Part"))
-    meshPart = p.get<const std::string>("Mesh Part");
-  else
-    meshPart = "upperside";
+  fieldLevel = p.get<int>("Field Level");
+  meshPart = p.get<std::string>("Mesh Part");
 }
 
 // **********************************************************************
@@ -47,8 +43,8 @@ void ScatterResidual2D<PHAL::AlbanyTraits::Jacobian, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_Vector> fT = workset.fT;
-  Teuchos::RCP<Tpetra_CrsMatrix> JacT = workset.JacT;
+  Teuchos::RCP<Tpetra_Vector>    fT   = Albany::getTpetraVector(workset.f);
+  Teuchos::RCP<Tpetra_CrsMatrix> JacT = Albany::getTpetraMatrix(workset.Jac);
   const bool loadResid = Teuchos::nonnull(fT);
   Teuchos::Array<LO> colT;
   const int neq = nodeID.dimension(2);
@@ -59,14 +55,13 @@ evaluateFields(typename Traits::EvalData workset)
   const Albany::NodalDOFManager& solDOFManager = workset.disc->getOverlapDOFManager("ordinary_solution");
   const Albany::LayeredMeshNumbering<LO>& layeredMeshNumbering = *workset.disc->getLayeredMeshNumbering();
   int numLayers = layeredMeshNumbering.numLayers;
-  fieldLevel = (fieldLevel < 0) ? numLayers : fieldLevel;
   colT.reserve(neq*this->numNodes*(numLayers+1));
-
 
   const Teuchos::ArrayRCP<Teuchos::ArrayRCP<GO> >& wsElNodeID  = workset.disc->getWsElNodeID()[workset.wsIndex];
 
-  if (workset.sideSets == Teuchos::null)
+  if (workset.sideSets == Teuchos::null) {
       TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Side sets not properly specified on the mesh" << std::endl);
+  }
 
   const Albany::SideSetList& ssList = *(workset.sideSets);
   Albany::SideSetList::const_iterator it = ssList.find(meshPart);
@@ -171,9 +166,7 @@ ScatterResidualWithExtrudedField(const Teuchos::ParameterList& p,
   if (p.isType<int>("Offset 2D Field"))
     offset2DField = p.get<int>("Offset 2D Field");
   else offset2DField = numFields-1;
-  if (p.isType<int>("Field Level"))
-    fieldLevel = p.get<int>("Field Level");
-  else fieldLevel = -1;
+  fieldLevel = p.get<int>("Field Level");
 }
 
 // **********************************************************************
@@ -182,8 +175,8 @@ void ScatterResidualWithExtrudedField<PHAL::AlbanyTraits::Jacobian, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
   auto nodeID = workset.wsElNodeEqID;
-  Teuchos::RCP<Tpetra_Vector> fT = workset.fT;
-  Teuchos::RCP<Tpetra_CrsMatrix> JacT = workset.JacT;
+  Teuchos::RCP<Tpetra_Vector>    fT   = Albany::getTpetraVector(workset.f);
+  Teuchos::RCP<Tpetra_CrsMatrix> JacT = Albany::getTpetraMatrix(workset.Jac);
   const bool loadResid = Teuchos::nonnull(fT);
   const int neq = nodeID.dimension(2);
   unsigned int nunk = this->numNodes*(neq-1);
@@ -239,7 +232,6 @@ evaluateFields(typename Traits::EvalData workset)
   const Albany::NodalDOFManager& solDOFManager = workset.disc->getOverlapDOFManager("ordinary_solution");
   const Albany::LayeredMeshNumbering<LO>& layeredMeshNumbering = *workset.disc->getLayeredMeshNumbering();
   int numLayers = layeredMeshNumbering.numLayers;
-  fieldLevel = (fieldLevel < 0) ? numLayers : fieldLevel;
   colT.resize(this->numNodes);
 
   const Teuchos::ArrayRCP<Teuchos::ArrayRCP<GO> >& wsElNodeID  = workset.disc->getWsElNodeID()[workset.wsIndex];
@@ -300,4 +292,4 @@ ScatterResidualWithExtrudedField(const Teuchos::ParameterList& p,
 {
 }
 
-}
+} // namespace PHAL

@@ -18,6 +18,8 @@
 #include "Aeras_Eta.hpp"
 #include "Kokkos_Vector.hpp"
 
+#include "Aeras_XZHydrostatic_EtaDotPi.hpp"
+
 namespace Aeras {
 
 //**********************************************************************
@@ -53,9 +55,9 @@ XZHydrostatic_EtaDotPi(const Teuchos::ParameterList& p,
   this->addDependentField(Pi);
   this->addDependentField(Temperature);
   this->addDependentField(Velocity);
+  this->addDependentField(etadot);
 
   this->addEvaluatedField(etadotdT);
-  this->addEvaluatedField(etadot);
   this->addEvaluatedField(etadotdVelx);
   this->addEvaluatedField(Pidot);
 

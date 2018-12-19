@@ -24,16 +24,16 @@ LCM:
     Response Functions:
       Observe Responses: true
       Responses Observation Frequency: 100
-      Number: 4
-      Response 0: IP to Nodal Field
+      Number: 3
+      Response 0: Solution Average
+      Response 1: Solution Max Value
+      Response 2: Solution Min Value
+      #Response 3: IP to Nodal Field
       ResponseParams 0:
         Number of Fields: 1
         IP Field Name 0: Cauchy_Stress
         IP Field Layout 0: Tensor
         Output to File: true
-      Response 1: Solution Average
-      Response 2: Solution Max Value
-      Response 3: Solution Min Value
   Discretization:
     Method: Exodus
     Exodus Input File Name: 'clamped_ct.g'
@@ -44,8 +44,8 @@ LCM:
     Number Of Time Derivatives: 2
     Exodus Write Interval: 10
   Regression Results:
-    Number of Comparisons: 4
-    Test Values: [0.000000000000e+00, 1.670250391225e-04, 2.478118246443e-07, -5.531540677441e-07]
+    Number of Comparisons: 3
+    Test Values: [1.670250391225e-04, 2.478118246443e-07, -5.531540677441e-07]
     Relative Tolerance: 1.0e-8
     Absolute Tolerance: 1.0e-8
   Piro:

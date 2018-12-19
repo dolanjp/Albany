@@ -9,13 +9,16 @@
 #include "Phalanx_DataLayout.hpp"
 #include "Phalanx_TypeStrings.hpp"
 #include "Intrepid2_FunctionSpaceTools.hpp"
+#include "Intrepid2_DefaultCubatureFactory.hpp"
+#include "Kokkos_ViewFactory.hpp"
 
+#include "Albany_MeshSpecs.hpp"
 #include "Albany_ProblemUtils.hpp"
+#include "Albany_DiscretizationUtils.hpp"
+#include "LandIce_ThicknessResid.hpp"
 
 //uncomment the following line if you want debug output to be printed to screen
 //#define OUTPUT_TO_SCREEN
-
-
 
 namespace LandIce {
 
@@ -26,35 +29,34 @@ ThicknessResid(const Teuchos::ParameterList& p,
               const Teuchos::RCP<Albany::Layouts>& dl) :
   dH        (p.get<std::string> ("Thickness Increment Variable Name"), dl->node_scalar),
   H0       (p.get<std::string> ("Past Thickness Name"), dl->node_scalar),
-  V        (p.get<std::string> ("Averaged Velocity Variable Name"), dl->node_vector),
   coordVec (p.get<std::string> ("Coordinate Vector Name"), dl->vertices_vector),
   Residual (p.get<std::string> ("Residual Name"), dl->node_scalar)
 {
-
-  dt = p.get<Teuchos::RCP<double> >("Time Step Ptr");
-
-  if (p.isType<const std::string>("Mesh Part"))
-    meshPart = p.get<const std::string>("Mesh Part");
-  else
-    meshPart = "upperside";
-
+  this->addDependentField(dH);
+  this->addDependentField(H0);
+  this->addDependentField(coordVec);
   if(p.isParameter("SMB Name")) {
    SMB = decltype(SMB)(p.get<std::string> ("SMB Name"), dl->node_scalar);
    have_SMB = true;
-  } else
+   this->addDependentField(SMB);
+  } else {
     have_SMB = false;
-
-  Teuchos::RCP<const Albany::MeshSpecsStruct> meshSpecs = p.get<Teuchos::RCP<const Albany::MeshSpecsStruct> >("Mesh Specs Struct");
-
-  this->addDependentField(dH);
-  this->addDependentField(H0);
-  this->addDependentField(V);
-  this->addDependentField(coordVec);
-  if(have_SMB)
-    this->addDependentField(SMB);
+  }
 
   this->addEvaluatedField(Residual);
 
+  dt = p.get<Teuchos::RCP<double> >("Time Step Ptr");
+  meshPart = p.get<std::string>("Mesh Part");
+
+  Teuchos::RCP<const Albany::MeshSpecsStruct> meshSpecs = p.get<Teuchos::RCP<const Albany::MeshSpecsStruct> >("Mesh Specs Struct");
+
+  std::string sideSetName  = p.get<std::string> ("Side Set Name");
+  TEUCHOS_TEST_FOR_EXCEPTION (dl->side_layouts.find(sideSetName)==dl->side_layouts.end(), std::runtime_error,
+                              "Error! Layout for side set " << sideSetName << " not found.\n");
+  Teuchos::RCP<Albany::Layouts> dl_side = dl->side_layouts.at(sideSetName);
+
+  V = decltype(V)(p.get<std::string>("Averaged Velocity Variable Name"), dl_side->node_vector);
+  this->addDependentField(V);
 
   this->setName("ThicknessResid"+PHX::typeAsString<EvalT>());
 
@@ -72,7 +74,6 @@ ThicknessResid(const Teuchos::ParameterList& p,
 
   cellType = Teuchos::rcp(new shards::CellTopology(elem_top));
 
-  Intrepid2::DefaultCubatureFactory cubFactory;
   cubatureDegree = p.isParameter("Cubature Degree") ? p.get<int>("Cubature Degree") : meshSpecs->cubatureDegree;
   numNodes = intrepidBasis->getCardinality();
 
@@ -86,21 +87,10 @@ ThicknessResid(const Teuchos::ParameterList& p,
 //**********************************************************************
 template<typename EvalT, typename Traits>
 void ThicknessResid<EvalT, Traits>::
-postRegistrationSetup(typename Traits::SetupData d,
+postRegistrationSetup(typename Traits::SetupData /* d */,
                       PHX::FieldManager<Traits>& fm)
 {
-  this->utils.setFieldData(dH,fm);
-  this->utils.setFieldData(H0,fm);
-  this->utils.setFieldData(V,fm);
-  this->utils.setFieldData(coordVec, fm);
-  if(have_SMB)
-    this->utils.setFieldData(SMB, fm);
-
-  this->utils.setFieldData(Residual,fm);
-
   physPointsCell = Kokkos::createDynRankView(coordVec.get_view(), "XXX", 1, numNodes, cellDims);
-  dofCell = Kokkos::createDynRankView(Residual.get_view(), "XXX", 1, numNodes);
-  dofCellVec = Kokkos::createDynRankView(Residual.get_view(), "XXX", 1, numNodes, numVecFODims);
 }
 
 //**********************************************************************
@@ -114,11 +104,11 @@ evaluateFields(typename Traits::EvalData workset)
   Kokkos::deep_copy(Residual.get_view(), ScalarT(0.0));
 
   const Albany::SideSetList& ssList = *(workset.sideSets);
-  Albany::SideSetList::const_iterator it = ssList.find(meshPart);
+  Albany::SideSetList::const_iterator it_ss = ssList.find(meshPart);
 
 
-  if (it != ssList.end()) {
-    const std::vector<Albany::SideStruct>& sideSet = it->second;
+  if (it_ss != ssList.end()) {
+    const std::vector<Albany::SideStruct>& sideSet = it_ss->second;
 
     Kokkos::DynRankView<RealType, PHX::Device> cubPointsSide;
     Kokkos::DynRankView<RealType, PHX::Device> refPointsSide;
@@ -153,7 +143,6 @@ evaluateFields(typename Traits::EvalData workset)
     for (std::size_t iSide = 0; iSide < sideSet.size(); ++iSide) { // loop over the sides on this ws and name
 
       // Get the data that corresponds to the side
-      const int elem_GID = sideSet[iSide].elem_GID;
       const int elem_LID = sideSet[iSide].elem_LID;
       const int elem_side = sideSet[iSide].side_local_id;
 
@@ -162,8 +151,8 @@ evaluateFields(typename Traits::EvalData workset)
       int numSideNodes = sideType->getNodeCount();
       Intrepid2::DefaultCubatureFactory cubFactory;
       cubatureSide = cubFactory.create<PHX::Device, RealType, RealType>(*sideType, cubatureDegree);
-      sideDims = sideType->getDimension();
-      numQPsSide = cubatureSide->getNumPoints();
+      int sideDims = sideType->getDimension();
+      int numQPsSide = cubatureSide->getNumPoints();
 
       // Allocate Temporary Views
       cubPointsSide = Kokkos::DynRankView<RealType, PHX::Device>("XXX", numQPsSide, sideDims);
@@ -240,12 +229,12 @@ evaluateFields(typename Traits::EvalData workset)
       std::map<LO, std::size_t>::const_iterator it;
 
       for (int i = 0; i < numSideNodes; ++i){
-        std::size_t node = side.node[i]; //it->second;
+        std::size_t node = side.node[i];
         dH_Cell(node) = dH(elem_LID, node);
         H0_Cell(node) = H0(elem_LID, node);
         SMB_Cell(node) = have_SMB ? SMB(elem_LID, node) : ScalarT(0.0);
         for (std::size_t dim = 0; dim < numVecFODims; ++dim)
-          V_Cell(node, dim) = V(elem_LID, node, dim);
+          V_Cell(node, dim) = V(elem_LID, elem_side, i, dim);
       }
 
       // This is needed, since evaluate currently sums into
@@ -262,7 +251,7 @@ evaluateFields(typename Traits::EvalData workset)
 
       // Get dof at cubature points of appropriate side (see DOFVecInterpolation evaluator)
       for (int i = 0; i < numSideNodes; ++i){
-        std::size_t node = side.node[i]; //it->second;
+        std::size_t node = side.node[i];
         for (std::size_t qp = 0; qp < numQPsSide; ++qp) {
           const MeshScalarT& tmp = trans_basis_refPointsSide(0, node, qp);
           dH_Side(qp) += dH_Cell(node) * tmp;
@@ -275,7 +264,7 @@ evaluateFields(typename Traits::EvalData workset)
 
       for (std::size_t qp = 0; qp < numQPsSide; ++qp) {
         for (int i = 0; i < numSideNodes; ++i){
-          std::size_t node = side.node[i]; //it->second;
+          std::size_t node = side.node[i];
           for (std::size_t dim = 0; dim < numVecFODims; ++dim) {
             const MeshScalarT& tmp = trans_gradBasis_refPointsSide(0, node, qp, dim);
             gradH_Side(qp, dim) += H0_Cell(node) * tmp;
@@ -285,7 +274,7 @@ evaluateFields(typename Traits::EvalData workset)
       }
 
       for (int i = 0; i < numSideNodes; ++i){
-        std::size_t node = side.node[i]; //it->second;
+        std::size_t node = side.node[i];
         ScalarT res = 0;
         for (std::size_t qp = 0; qp < numQPsSide; ++qp) {
           ScalarT divHV = divV_Side(qp)* H0_Side(qp);
@@ -301,6 +290,4 @@ evaluateFields(typename Traits::EvalData workset)
   }
 }
 
-//**********************************************************************
-}
-
+} // namespace LandIce

@@ -13,7 +13,8 @@ const char decorator[] = "Evaluator for ";
 
 // Name decorator.
 inline std::string
-evaluatorsToBuildName(const std::string& bc_name) {
+evaluatorsToBuildName(const std::string& bc_name)
+{
   std::stringstream ess;
   ess << decorator << bc_name;
   return ess.str();
@@ -22,12 +23,12 @@ evaluatorsToBuildName(const std::string& bc_name) {
 // Either (1) the inverse of above or (2) identity, in case the decorator is not
 // used.
 inline std::string
-plName(const std::string& name) {
+plName(const std::string& name)
+{
   const std::size_t pos = name.find(decorator);
   if (pos == std::string::npos) return name;
   return name.substr(pos + sizeof(decorator) - 1);
 }
-
 
 // DBCs do not depend on each other. However, BCs are not always compatible at
 // corners, and so order of evaluation can matter. Establish an order here. The
@@ -36,26 +37,27 @@ void
 imposeOrder(
     const Teuchos::ParameterList& bc_pl,
     const std::map<std::string, Teuchos::RCP<Teuchos::ParameterList>>&
-        evname2pl) {
-  using Teuchos::RCP;
+        evname2pl)
+{
   using Teuchos::ParameterList;
+  using Teuchos::RCP;
   typedef std::map<std::string, Teuchos::RCP<Teuchos::ParameterList>> S2PL;
-  typedef std::map<std::string, int> S2int;
+  typedef std::map<std::string, int>                                  S2int;
 
   const std::string parm_name("BCOrder");
-  const char* parm_val = "BCOrder_";
+  const char*       parm_val = "BCOrder_";
 
   // Get the order of the BCs as they are written in the XML file.
   // ParameterList::ConstIterator preserves the text ordering.
   S2int order;
-  int ne = 0;
+  int   ne = 0;
   for (ParameterList::ConstIterator it = bc_pl.begin(); it != bc_pl.end(); ++it)
     order[it->first] = ne++;
 
   std::vector<bool> found(ne, false);
   for (S2PL::const_iterator it = evname2pl.begin(); it != evname2pl.end();
        ++it) {
-    const std::string name = plName(it->first);
+    const std::string     name     = plName(it->first);
     S2int::const_iterator order_it = order.find(name);
     if (order_it == order.end()) {
       // It is not an error to add an evaluator not directly mapped to an XML
@@ -63,52 +65,47 @@ imposeOrder(
 
       // LB: if the bc is of the form 'DBC off NS...', we ignore the miss,
       //     since only one evaluator will be build for all the 'DBC off NS...'
-      //     bc specified for a given dof (and therefore, no match can be found here).
+      //     bc specified for a given dof (and therefore, no match can be found
+      //     here).
 
-      if (name.find("DBC off NS")!=std::string::npos)
-      {
+      if (name.find("DBC off NS") != std::string::npos) {
         bool found_off_ns = false;
         // We actually have an evaluator for this 'DBC off NS...', but it
         // probably have more than one NS in its name
-        for (order_it=order.begin(); order_it!=order.end(); ++order_it)
-        {
-          if (order_it->first.find("DBC off NS")!=std::string::npos)
-          {
-            // We found a 'DBC off NS...' bc. Let's check the NS and DOF inside name
-            // are inside this evaluator name
+        for (order_it = order.begin(); order_it != order.end(); ++order_it) {
+          if (order_it->first.find("DBC off NS") != std::string::npos) {
+            // We found a 'DBC off NS...' bc. Let's check the NS and DOF inside
+            // name are inside this evaluator name
 
             // Get NS name
-            size_t ns_pos  = name.find("NS ");
-            size_t ns_size = name.find(" ",ns_pos+3);
-            std::string ns_name = name.substr(ns_pos+3,ns_size);
+            size_t      ns_pos  = name.find("NS ");
+            size_t      ns_size = name.find(" ", ns_pos + 3);
+            std::string ns_name = name.substr(ns_pos + 3, ns_size);
 
             // Get DOF name
-            size_t dof_pos  = name.find("DOF ");
-            size_t dof_size = name.find(" ",dof_pos+4);
-            std::string dof_name = name.substr(dof_pos+4,dof_size);
+            size_t      dof_pos  = name.find("DOF ");
+            size_t      dof_size = name.find(" ", dof_pos + 4);
+            std::string dof_name = name.substr(dof_pos + 4, dof_size);
 
             // Check that NS and DOF name are inside this evaluator name
-            if (order_it->first.find(ns_name)!=std::string::npos &&
-                order_it->first.find(dof_name)!=std::string::npos)
-            {
+            if (order_it->first.find(ns_name) != std::string::npos &&
+                order_it->first.find(dof_name) != std::string::npos) {
               found_off_ns = true;
               break;
             }
           }
         }
 
-        // If we did not find the right DirichletOffNodeSet evaluator, it's really a miss
-        if (!found_off_ns)
-          continue;
-      }
-      else
-      {
+        // If we did not find the right DirichletOffNodeSet evaluator, it's
+        // really a miss
+        if (!found_off_ns) continue;
+      } else {
         // It really is a miss
         continue;
       }
     }
     const int index = order_it->second;
-    found[index] = true;
+    found[index]    = true;
     if (index > 0) {
       std::stringstream dependency;
       dependency << parm_val << index - 1;
@@ -150,21 +147,22 @@ imposeOrder(
 template <>
 Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits>>
 Albany::BCUtils<Albany::DirichletTraits>::constructBCEvaluators(
-    const std::vector<std::string>& nodeSetIDs,
-    const std::vector<std::string>& bcNames,
+    const std::vector<std::string>&      nodeSetIDs,
+    const std::vector<std::string>&      bcNames,
     Teuchos::RCP<Teuchos::ParameterList> params,
-    Teuchos::RCP<ParamLib> paramLib, int numEqn) {
-  using Teuchos::RCP;
-  using Teuchos::rcp;
-  using Teuchos::ParameterList;
+    Teuchos::RCP<ParamLib>               paramLib,
+    int                                  numEqn)
+{
+  using PHAL::AlbanyTraits;
   using PHX::DataLayout;
   using PHX::MDALayout;
-  using PHAL::AlbanyTraits;
+  using Teuchos::ParameterList;
+  using Teuchos::RCP;
+  using Teuchos::rcp;
 
   use_sdbcs_ = false;
-  nodeSetIDs_.resize(nodeSetIDs.size()); 
-  for (int i=0; i<nodeSetIDs.size(); i++) 
-    nodeSetIDs_[i] = nodeSetIDs[i]; 
+  nodeSetIDs_.resize(nodeSetIDs.size());
+  for (int i = 0; i < nodeSetIDs.size(); i++) nodeSetIDs_[i] = nodeSetIDs[i];
 
   if (!haveBCSpecified(
           params)) {  // If the BC sublist is not in the input file,
@@ -192,7 +190,7 @@ Albany::BCUtils<Albany::DirichletTraits>::constructBCEvaluators(
   evaluators = factory.buildEvaluators(evaluators_to_build);
 
   // Build the field manager
-  std::string allBC = "Evaluator for all Dirichlet BCs";
+  std::string          allBC = "Evaluator for all Dirichlet BCs";
   RCP<PHX::DataLayout> dummy = rcp(new PHX::MDALayout<Dummy>(0));
   return buildFieldManager(evaluators, allBC, dummy);
 }
@@ -200,21 +198,24 @@ Albany::BCUtils<Albany::DirichletTraits>::constructBCEvaluators(
 template <>
 Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits>>
 Albany::BCUtils<Albany::NeumannTraits>::constructBCEvaluators(
-    const Teuchos::RCP<Albany::MeshSpecsStruct>& meshSpecs,
-    const std::vector<std::string>& bcNames,
-    const Teuchos::ArrayRCP<std::string>& dof_names, bool isVectorField,
-    int offsetToFirstDOF, const std::vector<std::string>& conditions,
-    const Teuchos::Array<Teuchos::Array<int>>& offsets,
-    const Teuchos::RCP<Albany::Layouts>& dl,
-    Teuchos::RCP<Teuchos::ParameterList> params,
-    Teuchos::RCP<ParamLib> paramLib,
-    const Teuchos::RCP<Albany::MaterialDatabase>& materialDB) {
-  using Teuchos::RCP;
-  using Teuchos::rcp;
-  using Teuchos::ParameterList;
+    const Teuchos::RCP<Albany::MeshSpecsStruct>&  meshSpecs,
+    const std::vector<std::string>&               bcNames,
+    const Teuchos::ArrayRCP<std::string>&         dof_names,
+    bool                                          isVectorField,
+    int                                           offsetToFirstDOF,
+    const std::vector<std::string>&               conditions,
+    const Teuchos::Array<Teuchos::Array<int>>&    offsets,
+    const Teuchos::RCP<Albany::Layouts>&          dl,
+    Teuchos::RCP<Teuchos::ParameterList>          params,
+    Teuchos::RCP<ParamLib>                        paramLib,
+    const Teuchos::RCP<Albany::MaterialDatabase>& materialDB)
+{
+  using PHAL::AlbanyTraits;
   using PHX::DataLayout;
   using PHX::MDALayout;
-  using PHAL::AlbanyTraits;
+  using Teuchos::ParameterList;
+  using Teuchos::RCP;
+  using Teuchos::rcp;
 
   if (!haveBCSpecified(
           params)) {  // If the BC sublist is not in the input file,
@@ -229,8 +230,18 @@ Albany::BCUtils<Albany::NeumannTraits>::constructBCEvaluators(
   // Build the list of evaluators to build, with all the needed parameters
   std::map<std::string, RCP<Teuchos::ParameterList>> evaluators_to_build;
   buildEvaluatorsList(
-      evaluators_to_build, meshSpecs, bcNames, dof_names, isVectorField,
-      offsetToFirstDOF, conditions, offsets, dl, params, paramLib, materialDB);
+      evaluators_to_build,
+      meshSpecs,
+      bcNames,
+      dof_names,
+      isVectorField,
+      offsetToFirstDOF,
+      conditions,
+      offsets,
+      dl,
+      params,
+      paramLib,
+      materialDB);
 
   // Build Field Evaluators for each evaluation type
   PHX::EvaluatorFactory<AlbanyTraits, Albany::NeumannTraits::factory_type>
@@ -250,22 +261,25 @@ template <>
 Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits>>
 Albany::BCUtils<Albany::NeumannTraits>::constructBCEvaluators(
     const Teuchos::RCP<Albany::MeshSpecsStruct>& meshSpecs,
-    const std::vector<std::string>& bcNames,
-    const Teuchos::ArrayRCP<std::string>& dof_names, bool isVectorField,
-    int offsetToFirstDOF, const std::vector<std::string>& conditions,
-    const Teuchos::Array<Teuchos::Array<int>>& offsets,
-    const Teuchos::RCP<Albany::Layouts>& dl,
-    Teuchos::RCP<Teuchos::ParameterList> params,
-    Teuchos::RCP<ParamLib> paramLib,
+    const std::vector<std::string>&              bcNames,
+    const Teuchos::ArrayRCP<std::string>&        dof_names,
+    bool                                         isVectorField,
+    int                                          offsetToFirstDOF,
+    const std::vector<std::string>&              conditions,
+    const Teuchos::Array<Teuchos::Array<int>>&   offsets,
+    const Teuchos::RCP<Albany::Layouts>&         dl,
+    Teuchos::RCP<Teuchos::ParameterList>         params,
+    Teuchos::RCP<ParamLib>                       paramLib,
     const std::vector<Teuchos::RCP<PHX::Evaluator<PHAL::AlbanyTraits>>>&
-        extra_evaluators,
-    const Teuchos::RCP<Albany::MaterialDatabase>& materialDB) {
-  using Teuchos::RCP;
-  using Teuchos::rcp;
-  using Teuchos::ParameterList;
+                                                  extra_evaluators,
+    const Teuchos::RCP<Albany::MaterialDatabase>& materialDB)
+{
+  using PHAL::AlbanyTraits;
   using PHX::DataLayout;
   using PHX::MDALayout;
-  using PHAL::AlbanyTraits;
+  using Teuchos::ParameterList;
+  using Teuchos::RCP;
+  using Teuchos::rcp;
 
   if (!haveBCSpecified(
           params)) {  // If the BC sublist is not in the input file,
@@ -280,8 +294,18 @@ Albany::BCUtils<Albany::NeumannTraits>::constructBCEvaluators(
   // Build the list of evaluators to build, with all the needed parameters
   std::map<std::string, RCP<Teuchos::ParameterList>> evaluators_to_build;
   buildEvaluatorsList(
-      evaluators_to_build, meshSpecs, bcNames, dof_names, isVectorField,
-      offsetToFirstDOF, conditions, offsets, dl, params, paramLib, materialDB);
+      evaluators_to_build,
+      meshSpecs,
+      bcNames,
+      dof_names,
+      isVectorField,
+      offsetToFirstDOF,
+      conditions,
+      offsets,
+      dl,
+      params,
+      paramLib,
+      materialDB);
 
   // Build Field Evaluators for each evaluation type
   PHX::EvaluatorFactory<AlbanyTraits, Albany::NeumannTraits::factory_type>
@@ -291,7 +315,7 @@ Albany::BCUtils<Albany::NeumannTraits>::constructBCEvaluators(
       evaluators;
   evaluators = factory.buildEvaluators(evaluators_to_build);
 
-  std::string allBC = "Evaluator for all Neumann BCs";
+  std::string                          allBC = "Evaluator for all Neumann BCs";
   RCP<PHX::FieldManager<AlbanyTraits>> fm =
       buildFieldManager(evaluators, allBC, dl->dummy);
 
@@ -307,27 +331,29 @@ template <>
 void
 Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
     std::map<std::string, Teuchos::RCP<Teuchos::ParameterList>>&
-        evaluators_to_build,
-    const std::vector<std::string>& nodeSetIDs,
-    const std::vector<std::string>& bcNames,
+                                         evaluators_to_build,
+    const std::vector<std::string>&      nodeSetIDs,
+    const std::vector<std::string>&      bcNames,
     Teuchos::RCP<Teuchos::ParameterList> params,
-    Teuchos::RCP<ParamLib> paramLib, int numEqn) {
-  using Teuchos::RCP;
-  using Teuchos::rcp;
-  using Teuchos::ParameterList;
+    Teuchos::RCP<ParamLib>               paramLib,
+    int                                  numEqn)
+{
+  using PHAL::AlbanyTraits;
   using PHX::DataLayout;
   using PHX::MDALayout;
-  using PHAL::AlbanyTraits;
   using std::string;
-  
-  use_sdbcs_ = false; 
+  using Teuchos::ParameterList;
+  using Teuchos::RCP;
+  using Teuchos::rcp;
+
+  use_sdbcs_ = false;
 
   ParameterList BCparams = params->sublist(traits_type::bcParamsPl);
   BCparams.validateParameters(
       *(traits_type::getValidBCParameters(nodeSetIDs, bcNames)), 0);
 
-  RCP<DataLayout> dummy = rcp(new PHX::MDALayout<Dummy>(0));
-  RCP<std::vector<string>> bcs = rcp(new std::vector<string>());
+  RCP<DataLayout>          dummy = rcp(new PHX::MDALayout<Dummy>(0));
+  RCP<std::vector<string>> bcs   = rcp(new std::vector<string>());
 
   offsets_.resize(nodeSetIDs.size());
   // Check for all possible standard BCs (every dof on every nodeset) to see
@@ -424,30 +450,45 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
 
       if (BCparams.isSublist(ss)) {
         // grab the sublist
-        ParameterList& sub_list = BCparams.sublist(ss);
-        RCP<ParameterList> p = rcp(new ParameterList);
+        ParameterList&     sub_list = BCparams.sublist(ss);
+        RCP<ParameterList> p        = rcp(new ParameterList);
         p->set<int>("Type", traits_type::typeTd);
 
         // Extract the time values into a vector
-        // vector<RealType> timeValues =
-        // sub_list.get<Teuchos::Array<RealType>>("Time Values").toVector();
-        // RCP< vector<RealType>> t_ptr = Teuchos::rcpFromRef(timeValues);
-        // p->set< RCP< vector<RealType>>>("Time Values", t_ptr);
-        p->set<Teuchos::Array<RealType>>(
-            "Time Values",
-            sub_list.get<Teuchos::Array<RealType>>("Time Values"));
-
-        // cout << "timeValues: " << timeValues[0] << " " << timeValues[1] <<
-        // std::endl;
+        if (sub_list.isParameter("Time File") == true) {
+          std::string const filename = sub_list.get<std::string>("Time File");
+          std::ifstream     file(filename);
+          ALBANY_ASSERT(file.good() == true, "Error opening Time File");
+          std::stringstream buffer;
+          buffer << file.rdbuf();
+          file.close();
+          std::istringstream       iss(buffer.str());
+          Teuchos::Array<RealType> time_values;
+          iss >> time_values;
+          p->set<Teuchos::Array<RealType>>("Time Values", time_values);
+        } else {
+          p->set<Teuchos::Array<RealType>>(
+              "Time Values",
+              sub_list.get<Teuchos::Array<RealType>>("Time Values"));
+        }
 
         // Extract the BC values into a vector
-        // vector<RealType> BCValues =
-        // sub_list.get<Teuchos::Array<RealType>>("BC Values").toVector();
-        // RCP< vector<RealType>> b_ptr = Teuchos::rcpFromRef(BCValues);
-        // p->set< RCP< vector<RealType>>>("BC Values", b_ptr);
-        // p->set< vector<RealType>>("BC Values", BCValues);
-        p->set<Teuchos::Array<RealType>>(
-            "BC Values", sub_list.get<Teuchos::Array<RealType>>("BC Values"));
+        if (sub_list.isParameter("BC File") == true) {
+          std::string const filename = sub_list.get<std::string>("BC File");
+          std::ifstream     file(filename);
+          ALBANY_ASSERT(file.good() == true, "Error opening BC File");
+          std::stringstream buffer;
+          buffer << file.rdbuf();
+          file.close();
+          std::istringstream       iss(buffer.str());
+          Teuchos::Array<RealType> bc_values;
+          iss >> bc_values;
+          p->set<Teuchos::Array<RealType>>("BC Values", bc_values);
+        } else {
+          p->set<Teuchos::Array<RealType>>(
+              "BC Values", sub_list.get<Teuchos::Array<RealType>>("BC Values"));
+        }
+
         p->set<bool>("Mesh Deforms", sub_list.get<bool>("Mesh Deforms", false));
         p->set<RCP<DataLayout>>("Data Layout", dummy);
         p->set<string>("Dirichlet Name", ss);
@@ -479,30 +520,56 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
           traits_type::constructTimeDepSDBCName(nodeSetIDs[i], bcNames[j]);
 
       if (BCparams.isSublist(ss)) {
-
         use_sdbcs_ = true;
- 
+
         // grab the sublist
         ParameterList& sub_list = BCparams.sublist(ss);
 
         RCP<ParameterList> p = rcp(new ParameterList);
 
         p->set<int>("Type", traits_type::typeTs);
-        
+
         // Extract the time values into a vector
-        p->set<Teuchos::Array<RealType>>(
-            "Time Values",
-            sub_list.get<Teuchos::Array<RealType>>("Time Values"));
+        if (sub_list.isParameter("Time File") == true) {
+          std::string const filename = sub_list.get<std::string>("Time File");
+          std::ifstream     file(filename);
+          ALBANY_ASSERT(file.good() == true, "Error opening Time File");
+          std::stringstream buffer;
+          buffer << file.rdbuf();
+          file.close();
+          std::istringstream       iss(buffer.str());
+          Teuchos::Array<RealType> time_values;
+          iss >> time_values;
+          p->set<Teuchos::Array<RealType>>("Time Values", time_values);
+        } else {
+          p->set<Teuchos::Array<RealType>>(
+              "Time Values",
+              sub_list.get<Teuchos::Array<RealType>>("Time Values"));
+        }
 
         // Extract the BC values into a vector
-        p->set<Teuchos::Array<RealType>>(
-            "BC Values", sub_list.get<Teuchos::Array<RealType>>("BC Values"));
+        if (sub_list.isParameter("BC File") == true) {
+          std::string const filename = sub_list.get<std::string>("BC File");
+          std::ifstream     file(filename);
+          ALBANY_ASSERT(file.good() == true, "Error opening BC File");
+          std::stringstream buffer;
+          buffer << file.rdbuf();
+          file.close();
+          std::istringstream       iss(buffer.str());
+          Teuchos::Array<RealType> bc_values;
+          iss >> bc_values;
+          p->set<Teuchos::Array<RealType>>("BC Values", bc_values);
+        } else {
+          p->set<Teuchos::Array<RealType>>(
+              "BC Values", sub_list.get<Teuchos::Array<RealType>>("BC Values"));
+        }
 
         p->set<bool>("Mesh Deforms", sub_list.get<bool>("Mesh Deforms", false));
         p->set<RCP<DataLayout>>("Data Layout", dummy);
         p->set<string>("Dirichlet Name", ss);
         p->set<RealType>("Dirichlet Value", 0.0);
-        p->set<RealType>("SDBC Scaling", sub_list.get<RealType>("SDBC Scaling", 1.0));
+        p->set<RealType>(
+            "SDBC Scaling", sub_list.get<RealType>("SDBC Scaling", 1.0));
         p->set<int>("Equation Offset", j);
         offsets_[i].push_back(j);
         p->set<RCP<ParamLib>>("Parameter Library", paramLib);
@@ -651,18 +718,17 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
     }
   }
 
-#endif //ALBANY_LCM
+#endif  // ALBANY_LCM
 
   ///
   /// SDBC (S = "Symmetric", f.k.a. "Strong")
   ///
   for (std::size_t i = 0; i < nodeSetIDs.size(); i++) {
     for (std::size_t j = 0; j < bcNames.size(); j++) {
-      string ss =
-          traits_type::constructSDBCName(nodeSetIDs[i], bcNames[j]);
+      string ss = traits_type::constructSDBCName(nodeSetIDs[i], bcNames[j]);
       if (BCparams.isParameter(ss)) {
         RCP<ParameterList> p = rcp(new ParameterList);
-        use_sdbcs_ = true; 
+        use_sdbcs_           = true;
         p->set<int>("Type", traits_type::typeSt);
         p->set<RCP<DataLayout>>("Data Layout", dummy);
         p->set<string>("Dirichlet Name", ss);
@@ -687,16 +753,16 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
           traits_type::constructScaledSDBCName(nodeSetIDs[i], bcNames[j]);
       if (BCparams.isParameter(ss)) {
         RCP<ParameterList> p = rcp(new ParameterList);
-        use_sdbcs_ = true; 
+        use_sdbcs_           = true;
         p->set<int>("Type", traits_type::typeSt);
         p->set<RCP<DataLayout>>("Data Layout", dummy);
         p->set<string>("Dirichlet Name", ss);
-        Teuchos::Array<RealType> array = BCparams.get<Teuchos::Array<RealType>>(ss);
+        Teuchos::Array<RealType> array =
+            BCparams.get<Teuchos::Array<RealType>>(ss);
         p->set<RealType>("Dirichlet Value", array[0]);
         if (array.size() > 1) {
           p->set<RealType>("SDBC Scaling", array[1]);
-        }
-        else {
+        } else {
           p->set<RealType>("SDBC Scaling", 1.0);
         }
         p->set<string>("Node Set ID", nodeSetIDs[i]);
@@ -730,8 +796,8 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
         p->set<string>(
             "Coupled Application", sub_list.get<string>("Coupled Application"));
 
-        p->set<string>("Coupled Block",
-            sub_list.get<string>("Coupled Block", "NONE"));
+        p->set<string>(
+            "Coupled Block", sub_list.get<string>("Coupled Block", "NONE"));
 
         // Get the application from the main parameters list above
         // and pass it to the Schwarz BC evaluator.
@@ -768,8 +834,7 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
     string ss = traits_type::constructSDBCName(nodeSetIDs[i], "StrongSchwarz");
 
     if (BCparams.isSublist(ss)) {
-
-      use_sdbcs_ = true; 
+      use_sdbcs_ = true;
 
       // grab the sublist
       ParameterList& sub_list = BCparams.sublist(ss);
@@ -796,7 +861,8 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
         p->set<RCP<DataLayout>>("Data Layout", dummy);
         p->set<string>("Dirichlet Name", ss);
         p->set<RealType>("Dirichlet Value", 0.0);
-        p->set<RealType>("SDBC Scaling", sub_list.get<RealType>("SDBC Scaling", 1.0));
+        p->set<RealType>(
+            "SDBC Scaling", sub_list.get<RealType>("SDBC Scaling", 1.0));
         p->set<string>("Node Set ID", nodeSetIDs[i]);
         p->set<int>("Equation Offset", 0);
         for (std::size_t j = 0; j < bcNames.size(); j++) {
@@ -871,49 +937,46 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
   ///
   /// SideSet equations case: DBC to handle nodes not on the side set
   ///
-  for (std::size_t j = 0; j < bcNames.size(); ++j)
-  {
-    RCP<std::vector<string> > nodeSets(new std::vector<string>(0));
-    string dir_name = "DBC off NS";
-    double* value = NULL;
-    for (auto i = 0; i < nodeSetIDs.size(); ++i)
-    {
-      string ss = traits_type::constructBCNameOffNodeSet(nodeSetIDs[i], bcNames[j]);
+  for (std::size_t j = 0; j < bcNames.size(); ++j) {
+    RCP<std::vector<string>> nodeSets(new std::vector<string>(0));
+    string                   dir_name = "DBC off NS";
+    double*                  value    = NULL;
+    for (auto i = 0; i < nodeSetIDs.size(); ++i) {
+      string ss =
+          traits_type::constructBCNameOffNodeSet(nodeSetIDs[i], bcNames[j]);
 
-      if (BCparams.isParameter(ss))
-      {
+      if (BCparams.isParameter(ss)) {
         nodeSets->push_back(nodeSetIDs[i]);
         dir_name += " " + nodeSetIDs[i];
-        if (value==NULL)
-        {
-          value = new double();
+        if (value == NULL) {
+          value  = new double();
           *value = BCparams.get<double>(ss);
-        }
-        else
-        {
+        } else {
           // The solution is prescribed a unique value off the given side sets.
-          TEUCHOS_TEST_FOR_EXCEPTION (*value!=BCparams.get<double>(ss), std::logic_error,
-                                      "Error! For a given DOF, all Off-Node-Set BC MUST have the same value.\n");
+          TEUCHOS_TEST_FOR_EXCEPTION(
+              *value != BCparams.get<double>(ss),
+              std::logic_error,
+              "Error! For a given DOF, all Off-Node-Set BC MUST have the same "
+              "value.\n");
         }
       }
     }
     dir_name += " for DOF " + bcNames[j];
 
-    if (nodeSets->size()>0)
-    {
+    if (nodeSets->size() > 0) {
       RCP<ParameterList> p = rcp(new ParameterList());
 
       p->set<int>("Type", traits_type::typeON);
-      p->set< int > ("Equation Offset", j);
-      p->set<RCP<ParamLib> >("Parameter Library", paramLib);
+      p->set<int>("Equation Offset", j);
+      p->set<RCP<ParamLib>>("Parameter Library", paramLib);
 
       // Fill up ParameterList with things DirichletBase wants
       p->set<RCP<DataLayout>>("Data Layout", dummy);
-      p->set<string> ("Dirichlet Name", dir_name);
+      p->set<string>("Dirichlet Name", dir_name);
       p->set<RealType>("Dirichlet Value", *value);
-      p->set<RCP<std::vector<string> > > ("Node Sets", nodeSets);
-      p->set<RCP<ParamLib> >("Parameter Library", paramLib);
-      p->set< string > ("Node Set ID", "");
+      p->set<RCP<std::vector<string>>>("Node Sets", nodeSets);
+      p->set<RCP<ParamLib>>("Parameter Library", paramLib);
+      p->set<string>("Node Set ID", "");
 
       std::stringstream ess;
       ess << "Evaluator for " << dir_name;
@@ -941,25 +1004,29 @@ template <>
 void
 Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
     std::map<std::string, Teuchos::RCP<Teuchos::ParameterList>>&
-        evaluators_to_build,
-    const Teuchos::RCP<Albany::MeshSpecsStruct>& meshSpecs,
-    const std::vector<std::string>& bcNames,
-    const Teuchos::ArrayRCP<std::string>& dof_names, bool isVectorField,
-    int offsetToFirstDOF, const std::vector<std::string>& conditions,
-    const Teuchos::Array<Teuchos::Array<int>>& offsets,
-    const Teuchos::RCP<Albany::Layouts>& dl,
-    Teuchos::RCP<Teuchos::ParameterList> params,
-    Teuchos::RCP<ParamLib> paramLib,
-    const Teuchos::RCP<Albany::MaterialDatabase>& materialDB) {
-  using Teuchos::RCP;
-  using Teuchos::rcp;
-  using Teuchos::ParameterList;
+                                                  evaluators_to_build,
+    const Teuchos::RCP<Albany::MeshSpecsStruct>&  meshSpecs,
+    const std::vector<std::string>&               bcNames,
+    const Teuchos::ArrayRCP<std::string>&         dof_names,
+    bool                                          isVectorField,
+    int                                           offsetToFirstDOF,
+    const std::vector<std::string>&               conditions,
+    const Teuchos::Array<Teuchos::Array<int>>&    offsets,
+    const Teuchos::RCP<Albany::Layouts>&          dl,
+    Teuchos::RCP<Teuchos::ParameterList>          params,
+    Teuchos::RCP<ParamLib>                        paramLib,
+    const Teuchos::RCP<Albany::MaterialDatabase>& materialDB)
+{
+  using PHAL::AlbanyTraits;
   using PHX::DataLayout;
   using PHX::MDALayout;
-  using PHAL::AlbanyTraits;
   using std::string;
+  using Teuchos::ParameterList;
+  using Teuchos::RCP;
+  using Teuchos::rcp;
 
-  const bool enableMemoizer = params->get<bool>("Use MDField Memoization", false);
+  const bool enableMemoizer =
+      params->get<bool>("Use MDField Memoization", false);
 
   // Drop into the "Neumann BCs" sublist
   ParameterList BCparams = params->sublist(traits_type::bcParamsPl);
@@ -991,7 +1058,8 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
           //           std::cout << "Constructing NBC: " << ss << std::endl;
 
           TEUCHOS_TEST_FOR_EXCEPTION(
-              BCparams.isType<string>(ss), std::logic_error,
+              BCparams.isType<string>(ss),
+              std::logic_error,
               "NBC array information in XML/YAML file must be of type "
               "Array(double)\n");
 
@@ -1019,7 +1087,6 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
 
           if (conditions[k] == "robin" || conditions[k] == "radiate") {
             p->set<string>("DOF Name", dof_names[j]);
-
             p->set<bool>("Vector Field", isVectorField);
 
             if (isVectorField)
@@ -1027,94 +1094,28 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
             else
               p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_scalar);
           }
-#ifdef ALBANY_LANDICE
-          else if (conditions[k] == "basal") {
-            Teuchos::ParameterList& mapParamList =
-                params->sublist("Stereographic Map");
-            p->set<Teuchos::ParameterList*>("Stereographic Map", &mapParamList);
-            Teuchos::ParameterList& physics_list =
-                params->sublist("LandIce Physical Parameters");
-            string betaName = BCparams.get("BetaXY", "Constant");
-            double L = BCparams.get("L", 1.0);
-            double rho = physics_list.get("Ice Density", 910.0);
-            double rho_w = physics_list.get("Water Density", 1028.0);
-            p->set<double>("Ice Density", rho);
-            p->set<double>("Water Density", rho_w);
-            p->set<string>("BetaXY", betaName);
-            p->set<string>("Beta Field Name", "basal_friction");
-            p->set<string>("thickness Field Name", "ice_thickness");
-            p->set<string>("BedTopo Field Name", "bed_topography");
-            p->set<bool>(
-                "Use GLP",
-                physics_list.get("Use GLP", false));  // Do not use GLP
-                                                      // (Grounding line
-                                                      // parametrization) unless
-                                                      // actively enabled
 
-            p->set<double>("L", L);
-            p->set<string>("DOF Name", dof_names[0]);
-            p->set<bool>("Vector Field", isVectorField);
-            if (isVectorField)
-              p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_vector);
-            else
-              p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_scalar);
-          } else if (conditions[k] == "basal_scalar_field") {
-            Teuchos::ParameterList& mapParamList =
-                params->sublist("Stereographic Map");
-            p->set<Teuchos::ParameterList*>("Stereographic Map", &mapParamList);
-            p->set<string>("Beta Field Name", "basal_friction");
-            p->set<string>("DOF Name", dof_names[0]);
-            p->set<bool>("Vector Field", isVectorField);
-            p->set<string>("thickness Field Name", "ice_thickness");
-            if (isVectorField)
-              p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_vector);
-            else
-              p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_scalar);
-          } else if (conditions[k] == "lateral") {
-            Teuchos::ParameterList& mapParamList =
-                params->sublist("Stereographic Map");
-            p->set<Teuchos::ParameterList*>("Stereographic Map", &mapParamList);
-            Teuchos::ParameterList& physics_list =
-                params->sublist("LandIce Physical Parameters");
-            string betaName = BCparams.get("BetaXY", "Constant");
-            double g = physics_list.get("Gravity Acceleration", 9.8);
-            double rho = physics_list.get("Ice Density", 910.0);
-            double rho_w = physics_list.get("Water Density", 1028.0);
-            p->set<double>("Gravity Acceleration", g);
-            p->set<double>("Ice Density", rho);
-            p->set<double>("Water Density", rho_w);
-            p->set<string>("thickness Field Name", "ice_thickness");
-            p->set<string>("Elevation Field Name", "surface_height");
-            p->set<string>("DOF Name", dof_names[0]);
-            p->set<bool>("Vector Field", isVectorField);
-            if (isVectorField)
-              p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_vector);
-            else
-              p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_scalar);
-          }
-#endif
           // Pass the input file line
           p->set<string>("Neumann Input String", ss);
           p->set<Teuchos::Array<double>>(
               "Neumann Input Value", BCparams.get<Teuchos::Array<double>>(ss));
           p->set<string>("Neumann Input Conditions", conditions[k]);
 
-          // Enable Memoizer
-          if (enableMemoizer && conditions[k] == "lateral")
-            p->set<bool>("Enable Memoizer", enableMemoizer);
+          // If we are doing a Neumann internal boundary with a "scaled jump",
+          // the material DB database needs to be passed to the BC object
+          // Note: 'robin' is a very generic name. It is ok to allow some
+          // 'complex'
+          //       robin conditions (with a scaled jump), but we should allow
+          //       one to use 'robin' bc for the classic du/dn + alpha*u = g,
+          //       which means the user should not have to specify a material DB
 
-          // If we are doing a Neumann internal boundary with a "scaled jump"
-          // (includes "robin" too)
-          // The material DB database needs to be passed to the BC object
-
-          if (conditions[k] == "scaled jump" || conditions[k] == "robin" || conditions[k] == "radiate") {
+          if (conditions[k] == "scaled jump" || conditions[k] == "radiate") {
             TEUCHOS_TEST_FOR_EXCEPTION(
                 materialDB == Teuchos::null,
                 Teuchos::Exceptions::InvalidParameter,
                 "This BC needs a material database specified");
-
-            p->set<RCP<Albany::MaterialDatabase>>("MaterialDB", materialDB);
           }
+          p->set<RCP<Albany::MaterialDatabase>>("MaterialDB", materialDB);
 
           // Inputs: X, Y at nodes, Cubature, and Basis
           // p->set<string>("Node Variable Name", "Neumann");
@@ -1145,7 +1146,6 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
         string ss = traits_type::constructTimeDepBCName(
             meshSpecs->ssNames[i], bcNames[j], conditions[k]);
 
-        
         // Have a match of the line in input.xml
 
         if (BCparams.isSublist(ss)) {
@@ -1199,16 +1199,6 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
               p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_scalar);
           }
 
-          else if (conditions[k] == "basal") {
-            p->set<string>("DOF Name", dof_names[0]);
-            p->set<bool>("Vector Field", isVectorField);
-
-            if (isVectorField)
-              p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_vector);
-            else
-              p->set<RCP<DataLayout>>("DOF Data Layout", dl->node_scalar);
-          }
-
           // Pass the input file line
           p->set<string>("Neumann Input String", ss);
           p->set<Teuchos::Array<double>>(
@@ -1254,97 +1244,6 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
     evaluators_to_build[NeuGCV] = p;
   }
 
-#ifdef ALBANY_LANDICE
-  /*  // Build evaluator for basal_friction
-   string NeuGBF="Evaluator for Gather basal_friction";
-   {
-   string paramName = "basal_friction";
-   RCP<ParameterList> p = rcp(new ParameterList());
-   std::stringstream key; key<< paramName <<  "Is Distributed Parameter";
-   if(params->get<int>(key.str(),0) == 1) {
-   p->set<int>("Type", traits_type::typeSNP);
-   p->set< RCP<Albany::Layouts>>("Layouts Struct", dl);
-   p->set< string >("Parameter Name", paramName);
-   }
-   else {
-   p->set<int>("Type", traits_type::typeSF);
-   p->set< RCP<DataLayout>>  ("State Field Layout",  dl->node_scalar);
-   p->set< string >("State Name", paramName);
-   p->set< string >("Field Name", paramName);
-   }
-
-   evaluators_to_build[NeuGBF] = p;
-   }
-   */
-  // Build evaluator for thickness
-  string NeuGBF = "Evaluator for Gather basal_friction";
-  {
-    const string paramName = "basal_friction";
-    RCP<ParameterList> p = rcp(new ParameterList());
-    p->set<int>("Type", traits_type::typeSF);
-
-    // for new way
-    p->set<RCP<DataLayout>>("State Field Layout", dl->node_scalar);
-    p->set<string>("State Name", paramName);
-    p->set<std::string>("Field Name", paramName);
-
-    evaluators_to_build[NeuGBF] = p;
-  }
-
-  // Build evaluator for basal_friction
-  string NeuGBT = "Evaluator for Gather bed_topography";
-  {
-    const string paramName = "bed_topography";
-    RCP<ParameterList> p = rcp(new ParameterList());
-    std::stringstream key;
-    key << paramName << "Is Distributed Parameter";
-    if (params->get<int>(key.str(), 0) == 1) {
-      p->set<int>("Type", traits_type::typeSF);
-      p->set<RCP<Albany::Layouts>>("Layouts Struct", dl);
-      p->set<string>("Parameter Name", paramName);
-    } else {
-      p->set<int>("Type", traits_type::typeSF);
-      p->set<RCP<DataLayout>>("State Field Layout", dl->node_scalar);
-      p->set<string>("State Name", paramName);
-      p->set<string>("Field Name", paramName);
-    }
-
-    evaluators_to_build[NeuGBT] = p;
-  }
-
-  // Build evaluator for thickness
-  string NeuGT = "Evaluator for Gather thickness";
-  {
-    const string paramName = "ice_thickness";
-    RCP<ParameterList> p = rcp(new ParameterList());
-    p->set<int>("Type", traits_type::typeSF);
-
-    // for new way
-    p->set<RCP<DataLayout>>("State Field Layout", dl->node_scalar);
-    p->set<string>("State Name", paramName);
-    p->set<std::string>("Field Name", paramName);
-
-    if (enableMemoizer) p->set<bool>("Enable Memoizer", enableMemoizer);
-
-    evaluators_to_build[NeuGT] = p;
-  }
-
-  string NeuGSH = "Evaluator for Gather surface_height";
-  {
-    RCP<ParameterList> p = rcp(new ParameterList());
-    p->set<int>("Type", traits_type::typeSF);
-
-    // for new way
-    p->set<RCP<DataLayout>>("State Field Layout", dl->node_scalar);
-    p->set<string>("State Name", "surface_height");
-    p->set<string>("Field Name", "surface_height");
-
-    if (enableMemoizer) p->set<bool>("Enable Memoizer", enableMemoizer);
-
-    evaluators_to_build[NeuGSH] = p;
-  }
-#endif
-
   // Build evaluator for Gather Solution
   string NeuGS = "Evaluator for Gather Solution";
   {
@@ -1386,10 +1285,11 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
 template <typename BCTraits>
 Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits>>
 Albany::BCUtils<BCTraits>::buildFieldManager(
-    const Teuchos::RCP<std::vector<
-        Teuchos::RCP<PHX::Evaluator_TemplateManager<PHAL::AlbanyTraits>>>>
-        evaluators,
-    std::string& allBC, Teuchos::RCP<PHX::DataLayout>& dummy) {
+    const Teuchos::RCP<std::vector<Teuchos::RCP<
+        PHX::Evaluator_TemplateManager<PHAL::AlbanyTraits>>>> evaluators,
+    std::string&                                              allBC,
+    Teuchos::RCP<PHX::DataLayout>&                            dummy)
+{
   using PHAL::AlbanyTraits;
 
   // Create a DirichletFieldManager
@@ -1419,7 +1319,8 @@ Albany::BCUtils<BCTraits>::buildFieldManager(
 Teuchos::RCP<const Teuchos::ParameterList>
 Albany::DirichletTraits::getValidBCParameters(
     const std::vector<std::string>& nodeSetIDs,
-    const std::vector<std::string>& bcNames) {
+    const std::vector<std::string>& bcNames)
+{
   Teuchos::RCP<Teuchos::ParameterList> validPL =
       Teuchos::rcp(new Teuchos::ParameterList("Valid Dirichlet BC List"));
 
@@ -1433,8 +1334,8 @@ Albany::DirichletTraits::getValidBCParameters(
           nodeSetIDs[i], bcNames[j]);
       std::string pp = Albany::DirichletTraits::constructPressureDepBCName(
           nodeSetIDs[i], bcNames[j]);
-      std::string st = Albany::DirichletTraits::constructSDBCName(
-          nodeSetIDs[i], bcNames[j]);
+      std::string st =
+          Albany::DirichletTraits::constructSDBCName(nodeSetIDs[i], bcNames[j]);
       std::string sst = Albany::DirichletTraits::constructScaledSDBCName(
           nodeSetIDs[i], bcNames[j]);
       validPL->set<double>(
@@ -1442,9 +1343,11 @@ Albany::DirichletTraits::getValidBCParameters(
       validPL->set<double>(
           st, 0.0, "Value of SDBC corresponding to nodeSetID and dofName");
       Teuchos::Array<double> array(1);
-      array[0] = 0.0; 
+      array[0] = 0.0;
       validPL->set<Teuchos::Array<double>>(
-          sst, array, "Value of Scaled SDBC corresponding to nodeSetID and dofName");
+          sst,
+          array,
+          "Value of Scaled SDBC corresponding to nodeSetID and dofName");
       validPL->sublist(
           tt, false, "SubList of BC corresponding to nodeSetID and dofName");
       validPL->sublist(
@@ -1464,7 +1367,8 @@ Albany::DirichletTraits::getValidBCParameters(
       std::string onsbc = Albany::DirichletTraits::constructBCNameOffNodeSet(
           nodeSetIDs[i], bcNames[j]);
       validPL->set<double>(
-          onsbc, 0.0,
+          onsbc,
+          0.0,
           "Value of BC to prescribe off the given nodeset (use multiple "
           "entries for multiple nodesets)");
     }
@@ -1477,8 +1381,8 @@ Albany::DirichletTraits::getValidBCParameters(
         Albany::DirichletTraits::constructBCName(nodeSetIDs[i], "twist");
     std::string ww =
         Albany::DirichletTraits::constructBCName(nodeSetIDs[i], "Schwarz");
-    std::string sw =
-        Albany::DirichletTraits::constructSDBCName(nodeSetIDs[i], "StrongSchwarz");
+    std::string sw = Albany::DirichletTraits::constructSDBCName(
+        nodeSetIDs[i], "StrongSchwarz");
     std::string uu =
         Albany::DirichletTraits::constructBCName(nodeSetIDs[i], "CoordFunc");
     std::string pd =
@@ -1498,7 +1402,8 @@ Teuchos::RCP<const Teuchos::ParameterList>
 Albany::NeumannTraits::getValidBCParameters(
     const std::vector<std::string>& sideSetIDs,
     const std::vector<std::string>& bcNames,
-    const std::vector<std::string>& conditions) {
+    const std::vector<std::string>& conditions)
+{
   Teuchos::RCP<Teuchos::ParameterList> validPL =
       Teuchos::rcp(new Teuchos::ParameterList("Valid Neumann BC List"));
   ;
@@ -1527,25 +1432,27 @@ Albany::NeumannTraits::getValidBCParameters(
          */
         Teuchos::Array<double> defaultData;
         validPL->set<Teuchos::Array<double>>(
-            ss, defaultData,
+            ss,
+            defaultData,
             "Value of BC corresponding to sideSetID and boundary condition");
 
         validPL->sublist(
-            tt, false,
+            tt,
+            false,
             "SubList of BC corresponding to sideSetID and boundary condition");
       }
     }
   }
 
-  validPL->set<std::string>("BetaXY", "Constant", "Function Type for Basal BC");
   validPL->set<int>("Cubature Degree", 3, "Cubature Degree for Neumann BC");
-  validPL->set<double>("L", 1, "Length Scale for ISMIP-HOM Tests");
   return validPL;
 }
 
 std::string
 Albany::DirichletTraits::constructBCName(
-    const std::string& ns, const std::string& dof) {
+    const std::string& ns,
+    const std::string& dof)
+{
   std::stringstream ss;
   ss << "DBC on NS " << ns << " for DOF " << dof;
 
@@ -1554,7 +1461,9 @@ Albany::DirichletTraits::constructBCName(
 
 std::string
 Albany::DirichletTraits::constructSDBCName(
-    const std::string& ns, const std::string& dof) {
+    const std::string& ns,
+    const std::string& dof)
+{
   std::stringstream ss;
   ss << "SDBC on NS " << ns << " for DOF " << dof;
 
@@ -1563,17 +1472,20 @@ Albany::DirichletTraits::constructSDBCName(
 
 std::string
 Albany::DirichletTraits::constructScaledSDBCName(
-    const std::string& ns, const std::string& dof) {
+    const std::string& ns,
+    const std::string& dof)
+{
   std::stringstream ss;
   ss << "Scaled SDBC on NS " << ns << " for DOF " << dof;
 
   return ss.str();
 }
 
-
 std::string
 Albany::DirichletTraits::constructBCNameField(
-    const std::string& ns, const std::string& dof) {
+    const std::string& ns,
+    const std::string& dof)
+{
   std::stringstream ss;
   ss << "DBC on NS " << ns << " for DOF " << dof << " prescribe Field";
 
@@ -1582,7 +1494,9 @@ Albany::DirichletTraits::constructBCNameField(
 
 std::string
 Albany::DirichletTraits::constructSDBCNameField(
-    const std::string& ns, const std::string& dof) {
+    const std::string& ns,
+    const std::string& dof)
+{
   std::stringstream ss;
   ss << "SDBC on NS " << ns << " for DOF " << dof << " prescribe Field";
 
@@ -1591,18 +1505,21 @@ Albany::DirichletTraits::constructSDBCNameField(
 
 std::string
 Albany::DirichletTraits::constructScaledSDBCNameField(
-    const std::string& ns, const std::string& dof) {
+    const std::string& ns,
+    const std::string& dof)
+{
   std::stringstream ss;
   ss << "Scaled SDBC on NS " << ns << " for DOF " << dof << " prescribe Field";
 
   return ss.str();
 }
 
-
 std::string
 Albany::NeumannTraits::constructBCName(
-    const std::string& ns, const std::string& dof,
-    const std::string& condition) {
+    const std::string& ns,
+    const std::string& dof,
+    const std::string& condition)
+{
   std::stringstream ss;
   ss << "NBC on SS " << ns << " for DOF " << dof << " set " << condition;
   return ss.str();
@@ -1610,7 +1527,9 @@ Albany::NeumannTraits::constructBCName(
 
 std::string
 Albany::DirichletTraits::constructTimeDepBCName(
-    const std::string& ns, const std::string& dof) {
+    const std::string& ns,
+    const std::string& dof)
+{
   std::stringstream ss;
   ss << "Time Dependent " << Albany::DirichletTraits::constructBCName(ns, dof);
   return ss.str();
@@ -1618,7 +1537,9 @@ Albany::DirichletTraits::constructTimeDepBCName(
 
 std::string
 Albany::DirichletTraits::constructTimeDepSDBCName(
-    const std::string& ns, const std::string& dof) {
+    const std::string& ns,
+    const std::string& dof)
+{
   std::stringstream ss;
   ss << "Time Dependent "
      << Albany::DirichletTraits::constructSDBCName(ns, dof);
@@ -1627,7 +1548,9 @@ Albany::DirichletTraits::constructTimeDepSDBCName(
 
 std::string
 Albany::DirichletTraits::constructBCNameOffNodeSet(
-    const std::string& ns, const std::string& dof) {
+    const std::string& ns,
+    const std::string& dof)
+{
   std::stringstream ss;
   ss << "DBC off NS " << ns << " for DOF " << dof;
 
@@ -1636,7 +1559,9 @@ Albany::DirichletTraits::constructBCNameOffNodeSet(
 
 std::string
 Albany::DirichletTraits::constructPressureDepBCName(
-    const std::string& ns, const std::string& dof) {
+    const std::string& ns,
+    const std::string& dof)
+{
   std::stringstream ss;
   ss << "Pressure Dependent "
      << Albany::DirichletTraits::constructBCName(ns, dof);
@@ -1645,8 +1570,10 @@ Albany::DirichletTraits::constructPressureDepBCName(
 
 std::string
 Albany::NeumannTraits::constructTimeDepBCName(
-    const std::string& ns, const std::string& dof,
-    const std::string& condition) {
+    const std::string& ns,
+    const std::string& dof,
+    const std::string& condition)
+{
   std::stringstream ss;
   ss << "Time Dependent "
      << Albany::NeumannTraits::constructBCName(ns, dof, condition);

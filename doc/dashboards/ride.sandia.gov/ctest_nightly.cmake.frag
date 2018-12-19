@@ -205,7 +205,7 @@ if (BUILD_TRILINOS)
     "-DKokkos_ENABLE_Pthread:BOOL=OFF"
     "-DKokkos_ENABLE_Serial:BOOL=ON"
     "-DKokkos_ENABLE_TESTS:BOOL=ON"
-    "-DKOKKOS_ARCH:STRING=Power8;Pascal60"
+    "-DKOKKOS_ARCH:STRING='Power8\\;Pascal60'"
     "-DTPL_ENABLE_Thrust:BOOL=ON"
     "-DTPL_ENABLE_CUDA:BOOL=ON"
     "-DTPL_ENABLE_CUSPARSE:BOOL=ON"
@@ -216,11 +216,11 @@ if (BUILD_TRILINOS)
     "-DIntrepid2_ENABLE_TESTS:BOOL=OFF"
     "-DPhalanx_INDEX_SIZE_TYPE:STRING=UINT"
     "-DPhalanx_KOKKOS_DEVICE_TYPE:STRING=CUDA"
-    "-DSacado_ENABLE_COMPLEX:BOOL=ON"
-    "-DTeuchos_ENABLE_COMPLEX:BOOL=ON"
+    "-DSacado_ENABLE_COMPLEX:BOOL=OFF"
+    "-DTeuchos_ENABLE_COMPLEX:BOOL=OFF"
     "-DTpetra_ENABLE_Kokkos_Refactor:BOOL=ON"
     "-DKokkos_ENABLE_Cuda_Lambda:BOOL=ON"
-    "-DTpetra_ASSUME_CUDA_AWARE_MPI:BOOL=OFF"
+    "-DTpetra_ASSUME_CUDA_AWARE_MPI:BOOL=ON"
     "-DTpetra_INST_INT_LONG_LONG:BOOL=ON"
     "-DTpetra_INST_INT_INT:BOOL=OFF"
     #
@@ -260,6 +260,7 @@ if (BUILD_TRILINOS)
     "-DTrilinos_ENABLE_OpenMP:BOOL=OFF"
     "-DTrilinos_ENABLE_MiniTensor:BOOL=ON"
     "-DTrilinos_ENABLE_MueLu:BOOL=ON"
+    "-DMueLu_ENABLE_Tutorial:BOOL=OFF"
     "-DTrilinos_ENABLE_NOX:BOOL=ON"
     "-DTrilinos_ENABLE_Pamgen:BOOL=ON"
     "-DTrilinos_ENABLE_Phalanx:BOOL=ON"
@@ -277,7 +278,7 @@ if (BUILD_TRILINOS)
     "-DTrilinos_ENABLE_TESTS:BOOL=OFF"
     "-DTrilinos_ENABLE_Teko:BOOL=ON"
     "-DTrilinos_ENABLE_Teuchos:BOOL=ON"
-    "-DTrilinos_ENABLE_ThreadPool:BOOL=ON"
+    "-DTrilinos_ENABLE_ThreadPool:BOOL=OFF"
     "-DTrilinos_ENABLE_Thyra:BOOL=ON"
     "-DTrilinos_ENABLE_Tpetra:BOOL=ON"
     "-DTrilinos_ENABLE_Zoltan2:BOOL=ON"
@@ -440,7 +441,7 @@ if (BUILD_ALBANY)
   # Run Albany tests
   #
 
-  set (CTEST_TEST_TIMEOUT 1500)
+  set (CTEST_TEST_TIMEOUT 2100)
   CTEST_TEST (
     BUILD "${CTEST_BINARY_DIRECTORY}/AlbBuild"
     RETURN_VALUE HAD_ERROR)

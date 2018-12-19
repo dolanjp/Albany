@@ -21,7 +21,10 @@
 #include "CurrentCoords.hpp"
 #include "MechanicsResidual.hpp"
 #include "SurfaceBasis.hpp"
-#include "SurfaceScalarGradientOperator.hpp"
+//#include "SurfaceScalarGradientOperator.hpp"
+#include "SurfaceScalarGradientOperatorPorePressure.hpp"
+#include "SurfaceScalarGradientOperatorTransport.hpp"
+#include "SurfaceScalarGradientOperatorHydroStress.hpp"
 #include "SurfaceScalarJump.hpp"
 #include "SurfaceVectorGradient.hpp"
 #include "SurfaceVectorJump.hpp"
@@ -546,8 +549,10 @@ MechanicsProblem::constructEvaluators(
               false, dof_names, offset));
     }
 
-    fm0.template registerEvaluator<EvalT>(
-        evalUtils.constructGatherCoordinateVectorEvaluator());
+    if (have_mech_eq_ == false) { 
+       fm0.template registerEvaluator<EvalT>(
+          evalUtils.constructGatherCoordinateVectorEvaluator());
+    }
 
     if (!surface_element) {
       fm0.template registerEvaluator<EvalT>(
@@ -563,12 +568,12 @@ MechanicsProblem::constructEvaluators(
           evalUtils.constructDOFGradInterpolationEvaluator(
               dof_names[0], offset));
 
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructMapToPhysicalFrameEvaluator(cellType, cubature));
+      if (have_mech_eq_ == false) { 
+        fm0.template registerEvaluator<EvalT>(
+            evalUtils.constructComputeBasisFunctionsEvaluator(
+                cellType, intrepidBasis, cubature));
+      }
 
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructComputeBasisFunctionsEvaluator(
-              cellType, intrepidBasis, cubature));
     }
 
     fm0.template registerEvaluator<EvalT>(
@@ -632,9 +637,6 @@ MechanicsProblem::constructEvaluators(
               false, dof_names, offset));
     }
 
-    fm0.template registerEvaluator<EvalT>(
-        evalUtils.constructGatherCoordinateVectorEvaluator());
-
     if (!surface_element) {
       fm0.template registerEvaluator<EvalT>(
           evalUtils.constructDOFInterpolationEvaluator(dof_names[0], offset));
@@ -648,13 +650,6 @@ MechanicsProblem::constructEvaluators(
       fm0.template registerEvaluator<EvalT>(
           evalUtils.constructDOFGradInterpolationEvaluator(
               dof_names[0], offset));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructMapToPhysicalFrameEvaluator(cellType, cubature));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructComputeBasisFunctionsEvaluator(
-              cellType, intrepidBasis, cubature));
     }
 
     fm0.template registerEvaluator<EvalT>(
@@ -673,9 +668,6 @@ MechanicsProblem::constructEvaluators(
         evalUtils.constructGatherSolutionEvaluator_noTransient(
             false, dof_names, offset));
 
-    fm0.template registerEvaluator<EvalT>(
-        evalUtils.constructGatherCoordinateVectorEvaluator());
-
     if (!surface_element) {
       fm0.template registerEvaluator<EvalT>(
           evalUtils.constructDOFInterpolationEvaluator(dof_names[0], offset));
@@ -683,13 +675,6 @@ MechanicsProblem::constructEvaluators(
       fm0.template registerEvaluator<EvalT>(
           evalUtils.constructDOFGradInterpolationEvaluator(
               dof_names[0], offset));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructMapToPhysicalFrameEvaluator(cellType, cubature));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructComputeBasisFunctionsEvaluator(
-              cellType, intrepidBasis, cubature));
     }
 
     fm0.template registerEvaluator<EvalT>(
@@ -709,9 +694,6 @@ MechanicsProblem::constructEvaluators(
         evalUtils.constructGatherSolutionEvaluator_noTransient(
             false, dof_names, offset));
 
-    fm0.template registerEvaluator<EvalT>(
-        evalUtils.constructGatherCoordinateVectorEvaluator());
-
     if (!surface_element) {
       fm0.template registerEvaluator<EvalT>(
           evalUtils.constructDOFInterpolationEvaluator(dof_names[0], offset));
@@ -719,13 +701,6 @@ MechanicsProblem::constructEvaluators(
       fm0.template registerEvaluator<EvalT>(
           evalUtils.constructDOFGradInterpolationEvaluator(
               dof_names[0], offset));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructMapToPhysicalFrameEvaluator(cellType, cubature));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructComputeBasisFunctionsEvaluator(
-              cellType, intrepidBasis, cubature));
     }
 
     fm0.template registerEvaluator<EvalT>(
@@ -762,8 +737,6 @@ MechanicsProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(
         evalUtils.constructGatherSolutionEvaluator_noTransient(
             false, dof_names, offset));
-    fm0.template registerEvaluator<EvalT>(
-        evalUtils.constructGatherCoordinateVectorEvaluator());
 
     if (!surface_element) {
       fm0.template registerEvaluator<EvalT>(
@@ -772,13 +745,6 @@ MechanicsProblem::constructEvaluators(
       fm0.template registerEvaluator<EvalT>(
           evalUtils.constructDOFGradInterpolationEvaluator(
               dof_names[0], offset));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructMapToPhysicalFrameEvaluator(cellType, cubature));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructComputeBasisFunctionsEvaluator(
-              cellType, intrepidBasis, cubature));
     }
 
     fm0.template registerEvaluator<EvalT>(
@@ -826,13 +792,6 @@ MechanicsProblem::constructEvaluators(
       fm0.template registerEvaluator<EvalT>(
           evalUtils.constructDOFGradInterpolationEvaluator(
               dof_names[0], offset));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructMapToPhysicalFrameEvaluator(cellType, cubature));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructComputeBasisFunctionsEvaluator(
-              cellType, intrepidBasis, cubature));
     }
 
     fm0.template registerEvaluator<EvalT>(
@@ -880,13 +839,6 @@ MechanicsProblem::constructEvaluators(
       fm0.template registerEvaluator<EvalT>(
           evalUtils.constructDOFGradInterpolationEvaluator(
               dof_names[0], offset));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructMapToPhysicalFrameEvaluator(cellType, cubature));
-
-      fm0.template registerEvaluator<EvalT>(
-          evalUtils.constructComputeBasisFunctionsEvaluator(
-              cellType, intrepidBasis, cubature));
     }
 
     fm0.template registerEvaluator<EvalT>(
@@ -1440,11 +1392,11 @@ MechanicsProblem::constructEvaluators(
     }  // end if (have_mech_eq_)
 
     // Surface Gradient Operator
-    if (have_pore_pressure_eq_) {
-      // SurfaceScalarGradientOperator_Def.hpp
+    if (have_pore_pressure_eq_ && surface_element) {
+      // SurfaceScalarGradientOperatorPorePressure_Def.hpp
 
       Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
-          new Teuchos::ParameterList("Surface Scalar Gradient Operator"));
+          new Teuchos::ParameterList("Surface Scalar Gradient Operator Pore Pressure"));
 
       // inputs
       p->set<RealType>("thickness", thickness);
@@ -1457,13 +1409,12 @@ MechanicsProblem::constructEvaluators(
       // NOTE: NOT surf_Pore_Pressure here
       // NOTE: If you need to compute gradient for more than one scalar field,
       // that could cause trouble
-      if (have_pore_pressure_eq_ == true)
-        p->set<std::string>("Nodal Scalar Name", "Pore_Pressure");
+      p->set<std::string>("Nodal Scalar Name", "Pore_Pressure");
 
       // outputs
       p->set<std::string>(
-          "Surface Scalar Gradient Operator Name",
-          "Surface Scalar Gradient Operator");
+          "Surface Scalar Gradient Operator Pore Pressure Name",
+          "Surface Scalar Gradient Operator Pore Pressure");
       p->set<Teuchos::RCP<PHX::DataLayout>>(
           "Node QP Vector Data Layout", dl_->node_qp_vector);
       p->set<std::string>(
@@ -1472,15 +1423,15 @@ MechanicsProblem::constructEvaluators(
           "QP Vector Data Layout", dl_->qp_vector);
 
       ev = Teuchos::rcp(
-          new LCM::SurfaceScalarGradientOperator<EvalT, PHAL::AlbanyTraits>(
+          new LCM::SurfaceScalarGradientOperatorPorePressure<EvalT, PHAL::AlbanyTraits>(
               *p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
-    if (have_transport_eq_) {
-      // SurfaceScalarGradientOperator_Def.hpp
+    if (have_transport_eq_ && surface_element) {
+      // SurfaceScalarGradientOperatorTransport_Def.hpp
       Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
-          new Teuchos::ParameterList("Surface Scalar Gradient Operator"));
+          new Teuchos::ParameterList("Surface Scalar Gradient Operator Transport"));
       // inputs
       p->set<RealType>("thickness", thickness);
       p->set<Teuchos::RCP<Intrepid2::Cubature<PHX::Device>>>(
@@ -1496,26 +1447,25 @@ MechanicsProblem::constructEvaluators(
 
       // outputs
       p->set<std::string>(
-          "Surface Scalar Gradient Operator Name",
-          "Surface Scalar Gradient Operator");
+          "Surface Scalar Gradient Operator Transport Name",
+          "Surface Scalar Gradient Operator Transport");
       p->set<Teuchos::RCP<PHX::DataLayout>>(
           "Node QP Vector Data Layout", dl_->node_qp_vector);
-      if (have_transport_eq_ == true)
-        p->set<std::string>(
+      p->set<std::string>(
             "Surface Scalar Gradient Name", "Surface Transport Gradient");
       p->set<Teuchos::RCP<PHX::DataLayout>>(
           "QP Vector Data Layout", dl_->qp_vector);
 
       ev = Teuchos::rcp(
-          new LCM::SurfaceScalarGradientOperator<EvalT, PHAL::AlbanyTraits>(
+          new LCM::SurfaceScalarGradientOperatorTransport<EvalT, PHAL::AlbanyTraits>(
               *p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
-    if (have_hydrostress_eq_) {
-      // SurfaceScalarGradientOperator_Def.hpp
+    if (have_hydrostress_eq_ && surface_element) {
+      // SurfaceScalarGradientOperatorHydroStress_Def.hpp
       Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
-          new Teuchos::ParameterList("Surface Scalar Gradient Operator"));
+          new Teuchos::ParameterList("Surface Scalar Gradient Operator HydroStress"));
       // inputs
       p->set<RealType>("thickness", thickness);
       p->set<Teuchos::RCP<Intrepid2::Cubature<PHX::Device>>>(
@@ -1532,8 +1482,8 @@ MechanicsProblem::constructEvaluators(
 
       // outputs
       p->set<std::string>(
-          "Surface Scalar Gradient Operator Name",
-          "Surface Scalar Gradient Operator");
+          "Surface Scalar Gradient Operator HydroStress Name",
+          "Surface Scalar Gradient Operator HydroStress");
       p->set<Teuchos::RCP<PHX::DataLayout>>(
           "Node QP Vector Data Layout", dl_->node_qp_vector);
       p->set<std::string>(
@@ -1542,7 +1492,7 @@ MechanicsProblem::constructEvaluators(
           "QP Vector Data Layout", dl_->qp_vector);
 
       ev = Teuchos::rcp(
-          new LCM::SurfaceScalarGradientOperator<EvalT, PHAL::AlbanyTraits>(
+          new LCM::SurfaceScalarGradientOperatorHydroStress<EvalT, PHAL::AlbanyTraits>(
               *p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
     }
@@ -1953,8 +1903,14 @@ MechanicsProblem::constructEvaluators(
         p->set<std::string>(
             "Unit Gradient QP Variable Name", "surf_Pressure Gradient");
       }
+      //p->set<std::string>(
+      //    "Gradient BF Name", "Surface Scalar Gradient Operator");
       p->set<std::string>(
-          "Gradient BF Name", "Surface Scalar Gradient Operator");
+          "Gradient BF Name", "Surface Scalar Gradient Operator Pore Pressure");
+      p->set<std::string>(
+          "Gradient BF Name", "Surface Scalar Gradient Operator Transport");
+      p->set<std::string>(
+          "Gradient BF Name", "Surface Scalar Gradient Operator HydroStress");
       //   p->set<std::string>("Gradient BF Name", "Grad BF");
     }
 
@@ -2181,7 +2137,12 @@ MechanicsProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
 
     // Output QP pore pressure
-    bool const output_ip = material_db_->getElementBlockParam<bool>(
+    // IKT: commenting this out b/c it is a duplicate of earlier writing of porePressure
+    // to the output.  The current DAG rules in Trilinos as of 12/6/2018 do 
+    // not allow for such duplicates.  If Pore_Pressure at IPs is needed,
+    // one needs to create a different name for this field and uncomment code below.
+
+    /*bool const output_ip = material_db_->getElementBlockParam<bool>(
         eb_name, "Output IP" + porePressure, false);
 
     p = stateMgr.registerStateVariable(
@@ -2195,7 +2156,7 @@ MechanicsProblem::constructEvaluators(
         output_ip);
 
     ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
-    fm0.template registerEvaluator<EvalT>(ev);
+    fm0.template registerEvaluator<EvalT>(ev);*/
   }
 
   if (have_pore_pressure_eq_ && surface_element) {
@@ -2210,8 +2171,8 @@ MechanicsProblem::constructEvaluators(
         "Cubature", surfaceCubature);
     p->set<Intrepid2Basis>("Intrepid2 Basis", surfaceBasis);
     p->set<std::string>(
-        "Surface Scalar Gradient Operator Name",
-        "Surface Scalar Gradient Operator");
+        "Surface Scalar Gradient Operator Pore Pressure Name",
+        "Surface Scalar Gradient Operator Pore Pressure");
     p->set<std::string>("Scalar Gradient Name", "Surface Pressure Gradient");
     p->set<std::string>("Current Basis Name", "Current Basis");
     p->set<std::string>("Reference Dual Basis Name", "Reference Dual Basis");
@@ -2724,8 +2685,8 @@ MechanicsProblem::constructEvaluators(
         "Cubature", surfaceCubature);
     p->set<Intrepid2Basis>("Intrepid2 Basis", surfaceBasis);
     p->set<std::string>(
-        "Surface Scalar Gradient Operator Name",
-        "Surface Scalar Gradient Operator");
+        "Surface Scalar Gradient Operator Transport Name",
+        "Surface Scalar Gradient Operator Transport");
     p->set<std::string>(
         "Surface Transport Gradient Name", "Surface Transport Gradient");
     p->set<std::string>("Current Basis Name", "Current Basis");
@@ -2820,8 +2781,8 @@ MechanicsProblem::constructEvaluators(
         "Cubature", surfaceCubature);
     p->set<Intrepid2Basis>("Intrepid2 Basis", surfaceBasis);
     p->set<std::string>(
-        "Surface Scalar Gradient Operator Name",
-        "Surface Scalar Gradient Operator");
+        "Surface Scalar Gradient Operator HydroStress Name",
+        "Surface Scalar Gradient Operator HydroStress");
     p->set<std::string>("Current Basis Name", "Current Basis");
     p->set<std::string>("Reference Dual Basis Name", "Reference Dual Basis");
     p->set<std::string>("Reference Normal Name", "Reference Normal");

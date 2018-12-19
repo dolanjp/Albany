@@ -146,10 +146,13 @@ class ModelEvaluatorT
   mutable Teuchos::Array<ParamVec> sacado_param_vec;
 
   //! Allocated Jacobian for sending to user preconditioner
-  mutable Teuchos::RCP<Tpetra_CrsMatrix> Extra_W_crs;
+  mutable Teuchos::RCP<Thyra_LinearOp> Extra_W_op;
 
   //! Whether the problem supplies its own preconditioner
   bool supplies_prec;
+
+  //! Boolean marking whether Tempus is used 
+  bool use_tempus{false}; 
 
   //@}
 

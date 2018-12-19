@@ -10,7 +10,7 @@ set (INITIAL_LD_LIBRARY_PATH $ENV{LD_LIBRARY_PATH})
 
 set (CTEST_PROJECT_NAME "Albany" )
 set (CTEST_SOURCE_NAME repos)
-set (CTEST_BUILD_NAME "fedora28-gcc8.1.1-${CTEST_BUILD_CONFIGURATION}")
+set (CTEST_BUILD_NAME "fedora29-gcc8.2.1-${CTEST_BUILD_CONFIGURATION}")
 set (CTEST_BINARY_NAME build)
 
 
@@ -167,6 +167,7 @@ if (BUILD_ALBANY)
   set (CONFIGURE_OPTIONS
     "-DALBANY_TRILINOS_DIR:PATH=${TRILINSTALLDIR}"
     "-DENABLE_LCM:BOOL=ON"
+    "-DENABLE_SCOREC:BOOL=ON"
     "-DENABLE_CONTACT:BOOL=OFF"
     "-DENABLE_LCM_SPECULATIVE:BOOL=OFF"
     "-DENABLE_LANDICE:BOOL=ON"
@@ -176,7 +177,7 @@ if (BUILD_ALBANY)
     "-DENABLE_ALBANY_EPETRA_EXE:BOOL=ON"
     "-DENABLE_ASCR:BOOL=OFF"
     "-DENABLE_CHECK_FPE:BOOL=OFF"
-    "-DENABLE_MPAS_INTERFACE:BOOL=OFF"
+    "-DENABLE_MPAS_INTERFACE:BOOL=ON"
     "-DENABLE_CISM_INTERFACE:BOOL=ON"
     "-DENABLE_CISM_CHECK_COMPARISONS:BOOL=ON"
     "-DENABLE_CISM_EPETRA:BOOL=ON"
@@ -296,6 +297,7 @@ if (BUILD_ALBANY_NOEPETRA)
   set (CONFIGURE_OPTIONS
     "-DALBANY_TRILINOS_DIR:PATH=${TRILINSTALLDIR}"
     "-DENABLE_LCM:BOOL=ON"
+    "-DENABLE_SCOREC:BOOL=ON"
     "-DENABLE_CONTACT:BOOL=OFF"
     "-DENABLE_LCM_SPECULATIVE:BOOL=OFF"
     "-DENABLE_LANDICE:BOOL=ON"
@@ -506,7 +508,7 @@ if (BUILD_ALBFUNCTOR_OPENMP)
   endif ()
 
   if (BUILD_ALBFUNCTOR_OPENMP)
-    set (CTEST_TEST_TIMEOUT 1200)
+    set (CTEST_TEST_TIMEOUT 2400)
     CTEST_TEST (
       BUILD "${CTEST_BINARY_DIRECTORY}/IKTAlbanyFunctorOpenMP"
       RETURN_VALUE HAD_ERROR)
@@ -748,6 +750,134 @@ if (BUILD_CISM_PISCEES_EPETRA)
 #  if (HAD_ERROR)
 #  	message(FATAL_ERROR "Some CISM-Albany tests failed.")
 #  endif ()
+
+endif ()
+
+if (BUILD_ALBANY_FPE)
+
+  # Builds everything with FPE check enabled!
+  #
+
+  set_property (GLOBAL PROPERTY SubProject IKTAlbanyFPECheckDbg)
+  set_property (GLOBAL PROPERTY Label IKTAlbanyFPECheckDbg)
+
+  set (TRILINSTALLDIR "/home/ikalash/nightlyAlbanyTests/Results/Trilinos/build-debug/install")
+
+  set (CONFIGURE_OPTIONS
+    "-DALBANY_TRILINOS_DIR:PATH=${TRILINSTALLDIR}"
+    "-DCMAKE_CXX_FLAGS:STRING='-std=gnu++11 -g'"
+    "-DCMAKE_BUILD_TYPE:STRING=DEBUG"
+    "-DENABLE_LCM:BOOL=ON"
+    "-DENABLE_SCOREC:BOOL=ON"
+    "-DENABLE_CONTACT:BOOL=OFF"
+    "-DENABLE_LCM_SPECULATIVE:BOOL=OFF"
+    "-DENABLE_LANDICE:BOOL=ON"
+    "-DENABLE_TSUNAMI:BOOL=ON"
+    "-DENABLE_AERAS:BOOL=ON"
+    "-DENABLE_ATO:BOOL=ON"
+    "-DENABLE_ALBANY_EPETRA_EXE:BOOL=ON"
+    "-DENABLE_ASCR:BOOL=OFF"
+    "-DENABLE_CHECK_FPE:BOOL=ON"
+    "-DENABLE_MPAS_INTERFACE:BOOL=OFF"
+    "-DENABLE_CISM_INTERFACE:BOOL=OFF"
+    "-DENABLE_CISM_CHECK_COMPARISONS:BOOL=ON"
+    "-DENABLE_CISM_EPETRA:BOOL=ON"
+    "-DENABLE_CISM_REDUCED_COMM:BOOL=OFF"
+    "-DSEACAS_EPU=/home/ikalash/Trilinos/seacas-build/install/bin/epu"
+    "-DSEACAS_EXODIFF=/home/ikalash/Trilinos/seacas-build/install/bin/exodiff"
+    "-DSEACAS_ALGEBRA=/home/ikalash/Trilinos/seacas-build/install/bin/algebra"
+    "-DINSTALL_ALBANY:BOOL=OFF"
+    "-DENABLE_PARAMETERS_DEPEND_ON_SOLUTION:BOOL=ON"
+    "-DENABLE_USE_CISM_FLOW_PARAMETERS:BOOL=ON"
+    "-DENABLE_LAME:BOOL=OFF")
+  
+  if (NOT EXISTS "${CTEST_BINARY_DIRECTORY}/IKTAlbanyFPECheckDbg")
+    file (MAKE_DIRECTORY ${CTEST_BINARY_DIRECTORY}/IKTAlbanyFPECheckDbg)
+  endif ()
+
+  CTEST_CONFIGURE(
+    BUILD "${CTEST_BINARY_DIRECTORY}/IKTAlbanyFPECheckDbg"
+    SOURCE "${CTEST_SOURCE_DIRECTORY}/Albany"
+    OPTIONS "${CONFIGURE_OPTIONS}"
+    RETURN_VALUE HAD_ERROR
+    APPEND
+    )
+
+  if (CTEST_DO_SUBMIT)
+    ctest_submit (PARTS Configure
+      RETURN_VALUE  S_HAD_ERROR
+      )
+
+    if (S_HAD_ERROR)
+      message(FATAL_ERROR "Cannot submit Albany configure results!")
+    endif ()
+  endif ()
+
+  if (HAD_ERROR)
+    message(FATAL_ERROR "Cannot configure Albany build!")
+  endif ()
+
+  #
+  # Build Albany
+  #
+
+  set (CTEST_BUILD_TARGET all)
+  #set (CTEST_BUILD_TARGET install)
+
+  MESSAGE("\nBuilding target: '${CTEST_BUILD_TARGET}' ...\n")
+
+  CTEST_BUILD(
+    BUILD "${CTEST_BINARY_DIRECTORY}/IKTAlbanyFPECheckDbg"
+    RETURN_VALUE  HAD_ERROR
+    NUMBER_ERRORS  BUILD_LIBS_NUM_ERRORS
+    APPEND
+    )
+
+  if (CTEST_DO_SUBMIT)
+    ctest_submit (PARTS Build
+      RETURN_VALUE  S_HAD_ERROR
+      )
+
+    if (S_HAD_ERROR)
+      message(FATAL_ERROR "Cannot submit Albany build results!")
+    endif ()
+  endif ()
+
+  if (HAD_ERROR)
+    message(FATAL_ERROR "Cannot build Albany!")
+  endif ()
+
+  if (BUILD_LIBS_NUM_ERRORS GREATER 0)
+    message(FATAL_ERROR "Encountered build errors in Albany build. Exiting!")
+  endif ()
+
+  #
+  # Run Albany tests
+  #
+  
+  set (CTEST_TEST_TIMEOUT 1200)
+
+  CTEST_TEST(
+    BUILD "${CTEST_BINARY_DIRECTORY}/IKTAlbanyFPECheckDbg"
+    #              PARALLEL_LEVEL "${CTEST_PARALLEL_LEVEL}"
+    #              INCLUDE_LABEL "^${TRIBITS_PACKAGE}$"
+    #NUMBER_FAILED  TEST_NUM_FAILED
+    RETURN_VALUE  HAD_ERROR
+    )
+
+  if (CTEST_DO_SUBMIT)
+    ctest_submit (PARTS Test
+      RETURN_VALUE  S_HAD_ERROR
+      )
+
+    if (S_HAD_ERROR)
+      message(FATAL_ERROR "Cannot submit Albany test results!")
+    endif ()
+  endif ()
+
+  #if (HAD_ERROR)
+  #	message(FATAL_ERROR "Some Albany tests failed.")
+  #endif ()
 
 endif ()
 

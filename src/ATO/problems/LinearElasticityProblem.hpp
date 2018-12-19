@@ -362,6 +362,10 @@ Albany::LinearElasticityProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
+  // Pre-create the GatherScalarNodalParameters evaluators for all topologies
+  if(params->isType<Teuchos::RCP<ATO::TopologyArray>>("Topologies")) {
+    atoUtils.constructGatherScalarParamEvaluators(params->get<Teuchos::RCP<ATO::TopologyArray> >("Topologies"),fm0);
+  }
 
   if( blockHasBody )
   {
@@ -393,7 +397,6 @@ Albany::LinearElasticityProblem::constructEvaluators(
 
     // Apply user defined weighting 
     atoUtils.constructWeightedFieldEvaluators( params, fm0, stateMgr, elementBlockName, "QP Tensor", stressName );
-    atoUtils.SaveCellStateField(fm0, stateMgr, stressName, elementBlockName, dl->qp_tensor);
 
     { // Displacement Resid (creates residual)
       RCP<ParameterList> p = rcp(new ParameterList("Displacement Resid"));

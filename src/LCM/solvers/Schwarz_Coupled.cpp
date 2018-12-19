@@ -14,6 +14,7 @@
 #include "Teuchos_TestForException.hpp"
 #include "Teuchos_VerboseObject.hpp"
 
+#include "Albany_ThyraUtils.hpp"
 #include "Albany_TpetraThyraUtils.hpp"
 
 // uncomment the following to write stuff out to matrix market to debug
@@ -867,24 +868,18 @@ SchwarzCoupled::evalModelImpl(
         in_args.get_x_dot(), true);
   }
 
-  // Create a Teuchos array of the x for each model, for both Thyra and Tpetra
+  // Create a Teuchos array of the x for each model
   Teuchos::Array<Teuchos::RCP<const Thyra_Vector>> xs(num_models_),
       x_dots(num_models_);
-  Teuchos::Array<Teuchos::RCP<const Tpetra_Vector>> xTs(num_models_),
-      x_dotTs(num_models_);
 
   // x_dotdot not used, so just create a global Tpetra RCP
   Teuchos::RCP<const Tpetra_Vector> x_dotdotT;
 
   for (int m = 0; m < num_models_; ++m) {
     // Get each Thyra vector
-    xs[m]  = x->getVectorBlock(m);
-    xTs[m] = Albany::getConstTpetraVector(xs[m]);
+    xs[m] = x->getVectorBlock(m);
 
-    if (!x_dot.is_null()) {
-      x_dots[m]  = x_dot->getVectorBlock(m);
-      x_dotTs[m] = Albany::getConstTpetraVector(x_dots[m]);
-    }
+    if (!x_dot.is_null()) { x_dots[m] = x_dot->getVectorBlock(m); }
   }
 
   double const alpha =
@@ -928,22 +923,21 @@ SchwarzCoupled::evalModelImpl(
   //
   // Get the output arguments
   //
-  Teuchos::RCP<Thyra_ProductVector> fT_out;
+  Teuchos::RCP<Thyra_ProductVector> f_out;
   if (!out_args.get_f().is_null()) {
-    fT_out =
-        Teuchos::rcp_dynamic_cast<Thyra_ProductVector>(out_args.get_f(), true);
+    f_out = Albany::getProductVector(out_args.get_f());
   }
 
-  // Create a Teuchos array of the fT_out for each model.
-  Teuchos::Array<Teuchos::RCP<Tpetra_Vector>> fTs_out(num_models_);
-  if (fT_out != Teuchos::null) {
+  // Create a Teuchos array of the f_out for each model.
+  Teuchos::Array<Teuchos::RCP<Thyra_Vector>> fs_out(num_models_);
+  if (f_out != Teuchos::null) {
     for (auto m = 0; m < num_models_; ++m) {
       // Get each Tpetra vector
-      fTs_out[m] = Albany::getTpetraVector(fT_out->getNonconstVectorBlock(m));
+      fs_out[m] = f_out->getNonconstVectorBlock(m);
     }
   }
 
-  Teuchos::RCP<Thyra::LinearOpBase<ST>> W_op_outT = out_args.get_W_op();
+  Teuchos::RCP<Thyra_LinearOp> W_op_out = out_args.get_W_op();
 
   // Compute the functions
 
@@ -958,11 +952,11 @@ SchwarzCoupled::evalModelImpl(
     Teuchos::RCP<Albany::AbstractDiscretization> const& app_disc =
         apps_[m]->getDiscretization();
 
-    app_disc->writeSolutionToMeshDatabaseT(*xTs[m], time);
+    app_disc->writeSolutionToMeshDatabase(xs[m], time);
   }
 
   // W matrix for each individual model
-  if (Teuchos::nonnull(W_op_outT) == true) {
+  if (!W_op_out.is_null()) {
     for (auto m = 0; m < num_models_; ++m) {
       // computeGlobalJacobianT sets fTs_out[m] and jacs_[m]
       apps_[m]->computeGlobalJacobian(
@@ -974,25 +968,25 @@ SchwarzCoupled::evalModelImpl(
           x_dots[m],
           x_dotdot,
           sacado_param_vecs_[m],
-          fTs_out[m].get(),
-          *jacs_[m]);
+          fs_out[m],
+          Albany::createThyraLinearOp(jacs_[m]));
       fs_already_computed[m] = true;
     }
     // FIXME: create coupled W matrix from array of model W matrices
     Schwarz_CoupledJacobian jac(comm_);
-    W_op_outT = jac.getThyraCoupledJacobian(jacs_, apps_);
+    W_op_out = jac.getThyraCoupledJacobian(jacs_, apps_);
   }
 
   for (auto m = 0; m < num_models_; ++m) {
     if (apps_[m]->is_adjoint) {
-      Thyra::ModelEvaluatorBase::Derivative<ST> const f_derivT(
+      const Thyra_Derivative f_deriv(
           solver_outargs_[m].get_f(),
           Thyra::ModelEvaluatorBase::DERIV_TRANS_MV_BY_ROW);
 
-      Thyra::ModelEvaluatorBase::Derivative<ST> const dummy_derivT;
+      const Thyra_Derivative dummy_deriv;
 
       // need to add capability for sending this in
-      auto const response_index = 0;
+      int const response_index = 0;
 
       apps_[m]->evaluateResponseDerivative(
           response_index,
@@ -1002,42 +996,36 @@ SchwarzCoupled::evalModelImpl(
           x_dotdot,
           sacado_param_vecs_[m],
           NULL,
-          NULL,
-          f_derivT,
-          dummy_derivT,
-          dummy_derivT,
-          dummy_derivT);
+          Teuchos::null,
+          f_deriv,
+          dummy_deriv,
+          dummy_deriv,
+          dummy_deriv);
     } else {
-      if (Teuchos::nonnull(fTs_out[m]) && fs_already_computed[m] == false) {
+      if (Teuchos::nonnull(fs_out[m]) && fs_already_computed[m] == false) {
         apps_[m]->computeGlobalResidual(
             curr_time,
             xs[m],
             x_dots[m],
             x_dotdot,
             sacado_param_vecs_[m],
-            *fTs_out[m]);
+            fs_out[m]);
       }
     }
   }
 
   // Create preconditioner if w_prec_supports_ are on
   if (w_prec_supports_ == true) {
-    Teuchos::RCP<Thyra_Preconditioner> W_prec_outT = out_args.get_W_prec();
+    Teuchos::RCP<Thyra_Preconditioner> W_prec_out = out_args.get_W_prec();
 
     // IKT, 11/16/16: it may be desirable to move the following code into a
     // separate function, especially as we implement more preconditioners.
-    if (Teuchos::nonnull(W_prec_outT) == true) {
+    if (!W_prec_out.is_null()) {
       for (auto m = 0; m < num_models_; ++m) {
         if (!precs_[m]->isFillActive()) precs_[m]->resumeFill();
         if (mf_prec_type_ == JACOBI) {
-          // With matrix-free, W_op_outT is null, so computeJacobianT does not
+          // With matrix-free, W_op_out is null, so computeJacobian does not
           // get called earlier.  We need to call it here to get the Jacobians.
-          // Create fTtemp vector, so that this call to computeGlobalJacobianT
-          // doesn't overwrite the real residual.
-          Teuchos::RCP<Tpetra_Vector> fTtemp;
-          if (fT_out != Teuchos::null) {
-            fTtemp = Albany::getTpetraVector(fT_out->getNonconstVectorBlock(m));
-          }
           apps_[m]->computeGlobalJacobian(
               alpha,
               beta,
@@ -1047,8 +1035,8 @@ SchwarzCoupled::evalModelImpl(
               x_dots[m],
               x_dotdot,
               sacado_param_vecs_[m],
-              fTtemp.get(),
-              *jacs_[m]);
+              fs_out[m],
+              Albany::createThyraLinearOp(jacs_[m]));
           // Get diagonal of jacs_[m]
           Teuchos::RCP<Tpetra_Vector> diag =
               Teuchos::rcp(new Tpetra_Vector(jacs_[m]->getRowMap()));
@@ -1074,12 +1062,6 @@ SchwarzCoupled::evalModelImpl(
         } else if (mf_prec_type_ == ABS_ROW_SUM) {
           // With matrix-free, W_op_outT is null, so computeJacobianT does not
           // get called earlier.  We need to call it here to get the Jacobians.
-          // Create fTtemp vector, so that this call to computeGlobalJacobianT
-          // doesn't overwrite the real residual.
-          Teuchos::RCP<Tpetra_Vector> fTtemp;
-          if (fT_out != Teuchos::null) {
-            fTtemp = Albany::getTpetraVector(fT_out->getNonconstVectorBlock(m));
-          }
           apps_[m]->computeGlobalJacobian(
               alpha,
               beta,
@@ -1089,8 +1071,8 @@ SchwarzCoupled::evalModelImpl(
               x_dots[m],
               x_dotdot,
               sacado_param_vecs_[m],
-              fTtemp.get(),
-              *jacs_[m]);
+              fs_out[m],
+              Albany::createThyraLinearOp(jacs_[m]));
           // Create vector to store absrowsum
           Teuchos::RCP<Tpetra_Vector> absrowsum =
               Teuchos::rcp(new Tpetra_Vector(jacs_[m]->getRowMap()));
@@ -1147,17 +1129,17 @@ SchwarzCoupled::evalModelImpl(
       Teuchos::RCP<Thyra::DefaultPreconditioner<ST>> W_prec =
           Teuchos::rcp(new Thyra::DefaultPreconditioner<ST>);
       W_prec->initializeRight(W_op);
-      W_prec_outT = W_prec;
+      W_prec_out = W_prec;
     }
   }
 
 #ifdef WRITE_TO_MATRIX_MARKET
-  Albany::writeMatrixMarket(xTs, "sol", mm_counter_sol);
+  Albany::writeMatrixMarket(xs, "sol", mm_counter_sol);
   ++mm_counter_sol;
 #endif
 
 #ifdef WRITE_TO_MATRIX_MARKET
-  Albany::writeMatrixMarket(fTs_out, "res", mm_counter_res);
+  Albany::writeMatrixMarket(fs_out, "res", mm_counter_res);
   ++mm_counter_res;
 #endif
 
@@ -1174,20 +1156,12 @@ SchwarzCoupled::evalModelImpl(
   // FIXME: need to implement DgDx, DgDp, etc for sensitivity analysis!
   // Response functions
   for (auto j = 0; j < out_args.Ng(); ++j) {
-    Teuchos::RCP<Thyra_ProductVector> gT_out =
-        Teuchos::nonnull(out_args.get_g(j)) ?
-            Teuchos::rcp_dynamic_cast<Thyra_ProductVector>(
-                out_args.get_g(j), true) :
-            Teuchos::null;
+    auto g_out = Albany::getProductVector(out_args.get_g(j));
 
-    if (Teuchos::is_null(gT_out) == false) {
+    if (!g_out.is_null()) {
       for (auto m = 0; m < num_models_; ++m) {
-        // Get each Tpetra vector
-        Teuchos::RCP<Tpetra_Vector> gT_out_m =
-            Albany::getTpetraVector(gT_out->getNonconstVectorBlock(m));
-
         for (auto l = 0; l < out_args.Np(); ++l) {
-          // sets gT_out
+          // sets g_out
           apps_[m]->evaluateResponse(
               l,
               curr_time,
@@ -1195,7 +1169,7 @@ SchwarzCoupled::evalModelImpl(
               x_dots[m],
               x_dotdot,
               sacado_param_vecs_[m],
-              *gT_out_m);
+              g_out->getNonconstVectorBlock(m));
         }
       }
     }

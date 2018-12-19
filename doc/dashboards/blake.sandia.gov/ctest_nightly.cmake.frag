@@ -1,6 +1,6 @@
 
 # Begin User inputs:
-set (CTEST_SITE "mayer.sandia.gov" ) # generally the output of hostname
+set (CTEST_SITE "blake.sandia.gov" ) # generally the output of hostname
 set (CTEST_DASHBOARD_ROOT "$ENV{TEST_DIRECTORY}" ) # writable path
 set (CTEST_SCRIPT_DIRECTORY "$ENV{SCRIPT_DIRECTORY}" ) # where the scripts live
 set (CTEST_CMAKE_GENERATOR "Unix Makefiles" ) # What is your compilation apps ?
@@ -292,7 +292,7 @@ if (BUILD_TRILINOS_SERIAL)
       "-DTrilinos_ENABLE_Teko:BOOL=ON"
       "-DTrilinos_ENABLE_Tempus:BOOL=ON"
       "-DTrilinos_ENABLE_Teuchos:BOOL=ON"
-      "-DTrilinos_ENABLE_ThreadPool:BOOL=ON"
+      "-DTrilinos_ENABLE_ThreadPool:BOOL=OFF"
       "-DTrilinos_ENABLE_Thyra:BOOL=ON"
       "-DTrilinos_ENABLE_ThyraTpetraAdapters:BOOL=ON"
       "-DTrilinos_ENABLE_Tpetra:BOOL=ON"
@@ -378,7 +378,7 @@ if (BUILD_ALBANY_SERIAL)
     "-DALBANY_TRILINOS_DIR:FILEPATH=/home/projects/albany/nightlyCDashTrilinosBlake/build/TrilinosSerialInstall"
     "-DENABLE_LCM:BOOL=ON"
     "-DENABLE_LANDICE:BOOL=ON"
-    "-DENABLE_ATO:BOOL=ON"
+    "-DENABLE_ATO:BOOL=OFF"
     "-DENABLE_SCOREC:BOOL=OFF"
     "-DENABLE_ASCR:BOOL=OFF"
     "-DENABLE_TSUNAMI:BOOL=ON"
@@ -597,7 +597,7 @@ if (BUILD_TRILINOS_OPENMP)
       "-DTrilinos_ENABLE_Teko:BOOL=ON"
       "-DTrilinos_ENABLE_Tempus:BOOL=ON"
       "-DTrilinos_ENABLE_Teuchos:BOOL=ON"
-      "-DTrilinos_ENABLE_ThreadPool:BOOL=ON"
+      "-DTrilinos_ENABLE_ThreadPool:BOOL=OFF"
       "-DTrilinos_ENABLE_Thyra:BOOL=ON"
       "-DTrilinos_ENABLE_ThyraTpetraAdapters:BOOL=ON"
       "-DTrilinos_ENABLE_Tpetra:BOOL=ON"

@@ -11,7 +11,9 @@
 #include "Phalanx_Evaluator_WithBaseImpl.hpp"
 #include "Phalanx_Evaluator_Derived.hpp"
 #include "Phalanx_MDField.hpp"
+
 #include "Albany_Layouts.hpp"
+#include "PHAL_Dimension.hpp"
 
 namespace LandIce {
 /** \brief Finite Element Interpolation Evaluator
@@ -48,8 +50,6 @@ private:
   PHX::MDField<const ScalarT,Cell,QuadPoint,VecDim,Dim>   Ugrad;
   PHX::MDField<const ScalarT,Cell,QuadPoint>              muLandIce;
 
-  PHX::MDField<const ScalarT,Cell,Node,VecDim>            basalRes;
-  PHX::MDField<const ScalarT,Cell,Node,VecDim>            lateralRes;
   PHX::MDField<const MeshScalarT,Cell,QuadPoint, Dim>     coordVec;
 
   enum EQNTYPE {LandIce, POISSON, LandIce_XZ};
@@ -58,17 +58,11 @@ private:
   // Output:
   PHX::MDField<ScalarT,Cell,Node,VecDim> Residual;
 
-  std::size_t numNodes;
-  std::size_t numQPs;
-  std::size_t numDims;
-  std::size_t vecDimFO;
-  bool enableTransient;
-  Teuchos::ParameterList* stereographicMapList;
-  bool useStereographicMap;
-  bool needsBasalResidual;
-  bool needsLateralResidual;
+  const int numNodes, numQPs, numDims;
+  const bool useStereographicMap;
+  const RealType R2, x_0, y_0;
 
-  public:
+public:
 
   typedef Kokkos::View<int***, PHX::Device>::execution_space ExecutionSpace;
 

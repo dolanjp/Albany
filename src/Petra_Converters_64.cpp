@@ -125,7 +125,7 @@ Teuchos::RCP<Epetra_CrsGraph> Petra::TpetraCrsGraph_To_EpetraCrsGraph(const Teuc
 //TpetraCrsMatrix_To_EpetraCrsMatrix: copies Tpetra::CrsMatrix object into its analogous
 //Epetra_CrsMatrix object
 Teuchos::RCP<Epetra_CrsMatrix>
-Petra::TpetraCrsMatrix_To_EpetraCrsMatrix(const Teuchos::RCP<Tpetra_CrsMatrix>& tpetraCrsMatrix,
+Petra::TpetraCrsMatrix_To_EpetraCrsMatrix(const Teuchos::RCP<const Tpetra_CrsMatrix>& tpetraCrsMatrix,
                                           const Teuchos::RCP<const Epetra_Comm>& comm)
 {
   Teuchos::RCP<Epetra_CrsGraph> epetraCrsGraph = Petra::TpetraCrsGraph_To_EpetraCrsGraph(tpetraCrsMatrix->getCrsGraph(),comm);
@@ -143,7 +143,7 @@ Petra::TpetraCrsMatrix_To_EpetraCrsMatrix(const Teuchos::RCP<Tpetra_CrsMatrix>& 
 
 //TpetraCrsMatrix_To_EpetraCrsMatrix: copies Tpetra::CrsMatrix object into its analogous
 //Epetra_CrsMatrix object
-void Petra::TpetraCrsMatrix_To_EpetraCrsMatrix(const Teuchos::RCP<Tpetra_CrsMatrix>& tpetraCrsMatrix_,
+void Petra::TpetraCrsMatrix_To_EpetraCrsMatrix(const Teuchos::RCP<const Tpetra_CrsMatrix>& tpetraCrsMatrix_,
                                                Epetra_CrsMatrix& epetraCrsMatrix_,
                                                const Teuchos::RCP<const Epetra_Comm>& comm_)
 {
@@ -250,7 +250,7 @@ Teuchos::RCP<const Tpetra_Vector> Petra::EpetraVector_To_TpetraVectorConst(const
   auto mapT = EpetraMap_To_TpetraMap(epetraVector_.Map(), commT_);
   ST *values;
   epetraVector_.ExtractView(&values);
-  Teuchos::ArrayView<ST> valuesAV = Teuchos::arrayView(values, mapT->getGlobalNumElements());
+  Teuchos::ArrayView<ST> valuesAV = Teuchos::arrayView(values, mapT->getNodeNumElements());
   Teuchos::RCP<const Tpetra_Vector> tpetraVector_ = Teuchos::rcp(new Tpetra_Vector(mapT, valuesAV));
   return tpetraVector_;
 }
@@ -281,13 +281,13 @@ Teuchos::RCP<Tpetra_Vector> Petra::EpetraVector_To_TpetraVectorNonConst(const Ep
   auto mapT = EpetraMap_To_TpetraMap(epetraVector_.Map(), commT_);
   ST *values;
   epetraVector_.ExtractView(&values);
-  Teuchos::ArrayView<ST> valuesAV = Teuchos::arrayView(values, mapT->getGlobalNumElements());
+  Teuchos::ArrayView<ST> valuesAV = Teuchos::arrayView(values, mapT->getNodeNumElements());
   Teuchos::RCP<Tpetra_Vector> tpetraVector_ = Teuchos::rcp(new Tpetra_Vector(mapT, valuesAV));
   return tpetraVector_;
 }
 
 //EpetraCrsMatrix_To_TpetraCrsMatrix: copies Epetra_CrsMatrix to its analogous Tpetra_CrsMatrix
-Teuchos::RCP<Tpetra_CrsMatrix> Petra::EpetraCrsMatrix_To_TpetraCrsMatrix(Epetra_CrsMatrix& epetraCrsMatrix_,
+Teuchos::RCP<Tpetra_CrsMatrix> Petra::EpetraCrsMatrix_To_TpetraCrsMatrix(const Epetra_CrsMatrix& epetraCrsMatrix_,
                                                                const Teuchos::RCP<const Teuchos::Comm<int> >& commT_)
 {
   //get row map of Epetra::CrsMatrix & convert to Tpetra::Map

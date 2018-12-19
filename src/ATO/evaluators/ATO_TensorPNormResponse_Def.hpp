@@ -447,7 +447,28 @@ TransformResponse(int Cell, int QP, ScalarT& response_eff)
   ScalarT Spp3 = (Hpp1 + 2.0*sqrt(Hpp1*Hpp1+Hpp2)*cos((Thetapp+2.0*acos(-1.0))/3.0));
 
   //Apply the Barlat yield function to get effective response.
-  response_eff = pow((pow(Sp1-Spp1,R)+pow(Sp1-Spp2,R)+pow(Sp1-Spp3,R)+pow(Sp2-Spp1,R)+pow(Sp2-Spp2,R)+pow(Sp2-Spp3,R)+pow(Sp3-Spp1,R)+pow(Sp3-Spp2,R)+pow(Sp3-Spp3,R)) / 4.0 , 1.0/R);
+  ScalarT val1 = 1.0; 
+  ScalarT val2 = 1.0; 
+  ScalarT val3 = 1.0; 
+  ScalarT val4 = 1.0; 
+  ScalarT val5 = 1.0; 
+  ScalarT val6 = 1.0; 
+  ScalarT val7 = 1.0; 
+  ScalarT val8 = 1.0; 
+  ScalarT val9 = 1.0; 
+  for (int i=0; i<R; i++)  {
+    val1 *= (Sp1-Spp1); 
+    val2 *= (Sp1-Spp2); 
+    val3 *= (Sp1-Spp3); 
+    val4 *= (Sp2-Spp1); 
+    val5 *= (Sp2-Spp2); 
+    val6 *= (Sp2-Spp3); 
+    val7 *= (Sp3-Spp1); 
+    val8 *= (Sp3-Spp2); 
+    val9 *= (Sp3-Spp3); 
+  }
+  ScalarT val = (val1 + val2 + val3 + val4 + val5 + val6 + val7 + val8 + val9)/4.0;  
+  response_eff = pow(val , 1.0/R);
 }
 
 // **********************************************************************
@@ -501,11 +522,11 @@ postEvaluate(typename Traits::PostEvalData workset)
 
   this->global_response_eval[0] = pow(this->global_response_eval[0],1.0/pVal);
 
-  Teuchos::RCP<Tpetra_MultiVector> overlapped_dgdxT = workset.overlapped_dgdxT;
-  if (overlapped_dgdxT != Teuchos::null) overlapped_dgdxT->scale(scale);
+  Teuchos::RCP<Thyra_MultiVector> overlapped_dgdx = workset.overlapped_dgdx;
+  if (overlapped_dgdx != Teuchos::null) { overlapped_dgdx->scale(scale); }
 
-  Teuchos::RCP<Tpetra_MultiVector> overlapped_dgdxdotT = workset.overlapped_dgdxdotT;
-  if (overlapped_dgdxdotT != Teuchos::null) overlapped_dgdxdotT->scale(scale);
+  Teuchos::RCP<Thyra_MultiVector> overlapped_dgdxdot = workset.overlapped_dgdxdot;
+  if (overlapped_dgdxdot != Teuchos::null) { overlapped_dgdxdot->scale(scale); }
 }
 
 // **********************************************************************
@@ -518,8 +539,8 @@ postEvaluate(typename Traits::PostEvalData workset)
 
   this->global_response_eval[0] = pow(this->global_response_eval[0],1.0/pVal);
 
-  Teuchos::RCP<Tpetra_MultiVector> overlapped_dgdpT = workset.overlapped_dgdpT;
-  if(overlapped_dgdpT != Teuchos::null) overlapped_dgdpT->scale(scale);
+  Teuchos::RCP<Thyra_MultiVector> overlapped_dgdp = workset.overlapped_dgdp;
+  if(overlapped_dgdp != Teuchos::null) { overlapped_dgdp->scale(scale); }
 #ifndef ALBANY_EPETRA
   Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
   *out << "\n WARNING: This run is using Distributed Parameters (ATO::TensorPNormResponse) "
