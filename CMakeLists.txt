@@ -867,18 +867,6 @@ ELSE()
   SET(ALBANY_AMP FALSE)
 ENDIF()
 
-# Set optional dependency on WAFERLG, defaults to Disabled
-OPTION(ENABLE_WAFERLG "Flag to turn on WAFERLG (WAFER LASER GROOVING) source code" OFF)
-IF (ENABLE_WAFERLG)
-  SET(ALBANY_APF TRUE)
-  ADD_DEFINITIONS(-DALBANY_WAFERLG)
-  MESSAGE("-- WAFERLG       is Enabled, compiling with -DALBANY_WAFERLG")
-  SET(ALBANY_WAFERLG TRUE)
-ELSE()
-  MESSAGE("-- WAFERLG       is NOT Enabled.")
-  SET(ALBANY_WAFERLG FALSE)
-ENDIF()
-
 # set optional dependency on CTM, defaults to Disabled
 OPTION(ENABLE_CTM "Flag to turn on CTM, coupled thermomechanics source code" OFF)
 IF(ENABLE_CTM)
